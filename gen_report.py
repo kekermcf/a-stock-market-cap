@@ -707,7 +707,14 @@ with open(output_path, 'wb') as f:
     f.write(b'\xef\xbb\xbf')
     f.write(html.encode('utf-8'))
 
+# Also save as index.html for GitHub Pages (fixed URL)
+index_path = f'{DATA_DIR}/index.html'
+with open(index_path, 'wb') as f:
+    f.write(b'\xef\xbb\xbf')
+    f.write(html.encode('utf-8'))
+
 file_size = len(html.encode('utf-8')) / (1024 * 1024)
 print(f'Done! {len(results)} stocks')
 print(f'HTML size: {file_size:.2f} MB')
 print(f'Saved to: {output_path}')
+print(f'Index: {index_path}')
