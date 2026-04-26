@@ -115,9 +115,12 @@ tbody tr.ah-listed{{background:#e8f4fd}}
 tbody tr.ah-listed:hover{{background:#d6eaf8}}
 tbody tr.ah-announced{{background:#fef9e7}}
 tbody tr.ah-announced:hover{{background:#fdf2d1}}
+tbody tr.ah-rumor{{background:#f5eef8}}
+tbody tr.ah-rumor:hover{{background:#ebe1f0}}
 .ah-tag{{display:inline-block;font-size:11px;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:middle;font-weight:500}}
 .ah-tag.listed{{background:#b3d9f2;color:#1a5276}}
 .ah-tag.announced{{background:#f9e79f;color:#7d6608}}
+.ah-tag.rumor{{background:#e8daef;color:#6c3483}}
 tbody td{{padding:10px 8px;white-space:nowrap;text-align:right}}
 tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3),tbody td:nth-child(4){{text-align:left}}
 .code{{font-family:'SF Mono','Consolas',monospace;font-size:13px;color:#666}}
@@ -220,6 +223,7 @@ body.mobile .modal-close{{width:44px;height:44px;font-size:22px}}
 .mobile-card:hover{{box-shadow:0 2px 8px rgba(0,0,0,.12)}}
 .mobile-card.ah-listed{{background:#e8f4fd}}
 .mobile-card.ah-announced{{background:#fef9e7}}
+.mobile-card.ah-rumor{{background:#f5eef8}}
 .mc-top{{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}}
 .mc-name{{font-size:16px;font-weight:700;color:#1a1a2e}}
 .mc-name .ah-tag{{font-size:10px;padding:1px 5px;margin-left:4px}}
@@ -327,7 +331,7 @@ window.onerror = function(msg, url, line) {{
 }};
 
 var allData = {rj};
-var ahStatus = {aj};  // A+H status: "listed" or "announced"
+var ahStatus = {aj};  // A+H status: "listed", "announced", or "rumor"
 // 预计算每只股票按市值降序的原始排名
 var mvRank = {{}};
 var sorted = allData.slice().sort(function(a, b) {{ return b.total_mv - a.total_mv; }});
@@ -370,8 +374,8 @@ function render() {{
     var r = pd[i];
     var rk = r._rank;
     var ah = ahStatus[r.ts_code] || '';
-    var ahClass = ah === 'listed' ? ' ah-listed' : ah === 'announced' ? ' ah-announced' : '';
-    var ahTag = ah === 'listed' ? ' <span class="ah-tag listed">A+H</span>' : ah === 'announced' ? ' <span class="ah-tag announced">拟H股</span>' : '';
+    var ahClass = ah === 'listed' ? ' ah-listed' : ah === 'announced' ? ' ah-announced' : ah === 'rumor' ? ' ah-rumor' : '';
+    var ahTag = ah === 'listed' ? ' <span class="ah-tag listed">A+H</span>' : ah === 'announced' ? ' <span class="ah-tag announced">拟H股</span>' : ah === 'rumor' ? ' <span class="ah-tag rumor">Rumor</span>' : '';
     var revHtml = r.revenue != null ? numfmt(r.revenue, 1) : '<span class="pending">暂无</span>';
     var gprHtml = r.gpr != null ? Math.round(r.gpr) + '%' : '<span class="pending">-</span>';
     var npHtml = r.net_profit != null ? numfmt(r.net_profit, 0) : '<span class="pending">暂无</span>';
@@ -406,8 +410,8 @@ function renderMobileList(pd) {{
   for (var i = 0; i < pd.length; i++) {{
     var r = pd[i];
     var ah = ahStatus[r.ts_code] || '';
-    var ahClass = ah === 'listed' ? ' ah-listed' : ah === 'announced' ? ' ah-announced' : '';
-    var ahTag = ah === 'listed' ? ' <span class="ah-tag listed">A+H</span>' : ah === 'announced' ? ' <span class="ah-tag announced">拟H股</span>' : '';
+    var ahClass = ah === 'listed' ? ' ah-listed' : ah === 'announced' ? ' ah-announced' : ah === 'rumor' ? ' ah-rumor' : '';
+    var ahTag = ah === 'listed' ? ' <span class="ah-tag listed">A+H</span>' : ah === 'announced' ? ' <span class="ah-tag announced">拟H股</span>' : ah === 'rumor' ? ' <span class="ah-tag rumor">Rumor</span>' : '';
     var ytd24 = r.ytd_2024 != null ? ytdHtml(r.ytd_2024) : '<span class="pending">-</span>';
     var ytd25 = r.ytd_2025 != null ? ytdHtml(r.ytd_2025) : '<span class="pending">-</span>';
     var ytd26 = r.ytd_2026 != null ? ytdHtml(r.ytd_2026) : '<span class="pending">-</span>';
