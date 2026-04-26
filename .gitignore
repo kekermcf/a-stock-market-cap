@@ -22,3 +22,7 @@ __pycache__/
 # OS
 Thumbs.db
 .DS_Store
+
+# Old dated HTML/CSV files (keep only latest)
+A股市值超200亿名单_*.csv
+A股市值超200亿名单_*.html

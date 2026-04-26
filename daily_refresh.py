@@ -283,6 +283,30 @@ def main():
     # We'll call gen_report.py directly
     os.system(f'"{sys.executable}" "{DATA_DIR}/gen_report.py"')
     
+    # Step 7: Git push to GitHub Pages
+    print('\n[6/6] Pushing to GitHub Pages')
+    try:
+        env = os.environ.copy()
+        env['GIT_SSH_COMMAND'] = 'ssh -o StrictHostKeyChecking=accept-new'
+        import subprocess
+        cmds = [
+            ['git', 'add', '-A'],
+            ['git', 'commit', '-m', f'Auto update: {trade_date}'],
+            ['git', 'push', 'origin', 'main'],
+        ]
+        for cmd in cmds:
+            result = subprocess.run(cmd, capture_output=True, text=True, cwd=DATA_DIR, env=env, timeout=60)
+            if result.returncode != 0 and 'nothing to commit' not in result.stdout and 'nothing to commit' not in result.stderr:
+                if 'no changes added' not in result.stdout and 'no changes added' not in result.stderr:
+                    print(f'  Warning: {" ".join(cmd)}: {result.stderr.strip()[:200]}')
+            else:
+                if 'commit' in cmd[1]:
+                    print(f'  Committed: {trade_date}')
+                elif 'push' in cmd[1]:
+                    print(f'  Pushed to GitHub!')
+    except Exception as e:
+        print(f'  Git push failed: {e}')
+    
     print('\nDone!')
 
 if __name__ == '__main__':
