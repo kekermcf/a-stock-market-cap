@@ -1,0 +1,24 @@
+# Data cache (too large for git, regenerated daily)
+cache/
+
+# Intermediate JSON files
+stock_data.json
+stock_data_full.json
+
+# Utility scripts not needed for the website
+check_data.py
+check_profiles.py
+fetch_finance.py
+fetch_mv.py
+publish.py
+
+# WorkBuddy internal
+.workbuddy/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+Thumbs.db
+.DS_Store
