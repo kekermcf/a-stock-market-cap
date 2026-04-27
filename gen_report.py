@@ -699,6 +699,10 @@ document.addEventListener('keydown', function(e) {{ if (e.key === 'Escape') docu
 
 // Init view toggle button on page load
 (function(){{
+  // Auto-detect mobile on page load
+  if (window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {{
+    document.body.classList.add('mobile');
+  }}
   var isMb = document.body.classList.contains('mobile');
   var icon = document.getElementById('viewIcon');
   var label = document.getElementById('viewLabel');
