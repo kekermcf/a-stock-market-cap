@@ -427,9 +427,9 @@ function renderMobileList(pd) {{
           '<span>' + (r.industry || '-') + '</span>' +
         '</div>' +
         '<div class="mc-ytd">' +
-          '<div class="mc-ytd-item"><span class="year-label">24</span>' + ytd24 + '</div>' +
-          '<div class="mc-ytd-item"><span class="year-label">25</span>' + ytd25 + '</div>' +
-          '<div class="mc-ytd-item"><span class="year-label">26</span>' + ytd26 + '</div>' +
+          '<div class="mc-ytd-item"><span class="year-label">24年初至今</span>' + ytd24 + '</div>' +
+          '<div class="mc-ytd-item"><span class="year-label">25年初至今</span>' + ytd25 + '</div>' +
+          '<div class="mc-ytd-item"><span class="year-label">YTD</span>' + ytd26 + '</div>' +
         '</div>' +
         (r.revenue != null || r.net_profit != null ? '<div class="mc-fin">' +
           (r.revenue != null ? '<span>营收' + numfmt(r.revenue, 0) + '亿</span>' : '') +
