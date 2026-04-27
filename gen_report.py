@@ -364,6 +364,7 @@ function rateCls(v) {{
 }}
 
 function render() {{
+  PAGE_SIZE = document.body.classList.contains('mobile') ? 30 : 60;
   var tbody = document.getElementById('stockTableBody');
   if (!tbody) return;
   var s = (curPage - 1) * PAGE_SIZE;
@@ -450,6 +451,7 @@ function toggleView() {{
   if (isMobile) {{
     document.getElementById('mobileList').addEventListener('click', handleMobileClick);
   }}
+  curPage = 1;
   render();
 }}
 
@@ -694,6 +696,15 @@ function renderMVChart(mv, name) {{
 document.getElementById('modalClose').addEventListener('click', function() {{ document.getElementById('modalOverlay').classList.remove('active'); }});
 document.getElementById('modalOverlay').addEventListener('click', function(e) {{ if (e.target === e.currentTarget) e.currentTarget.classList.remove('active'); }});
 document.addEventListener('keydown', function(e) {{ if (e.key === 'Escape') document.getElementById('modalOverlay').classList.remove('active'); }});
+
+// Init view toggle button on page load
+(function(){{
+  var isMb = document.body.classList.contains('mobile');
+  var icon = document.getElementById('viewIcon');
+  var label = document.getElementById('viewLabel');
+  if (icon) icon.textContent = isMb ? '💻' : '📱';
+  if (label) label.textContent = isMb ? '桌面版' : '手机版';
+}})();
 
 try {{
   filterData();
