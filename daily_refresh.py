@@ -48,7 +48,7 @@ def tushare_call(api_name, params=None, fields=''):
         return {}
 
 def get_latest_trade_date():
-    """获取最新交易日"""
+    """获取最新交易日（当日的bak_basic数据可能还没出来，自动回退）"""
     # 用Tushare交易日历
     today = datetime.now().strftime('%Y%m%d')
     data = tushare_call('trade_cal', {'exchange': 'SSE', 'start_date': '20260420', 'end_date': today}, 'cal_date,is_open')
@@ -61,6 +61,32 @@ def get_latest_trade_date():
     while d.weekday() >= 5:  # skip weekend
         d -= timedelta(days=1)
     return d.strftime('%Y%m%d')
+
+def find_available_trade_date(preferred_date):
+    """如果指定日期没有数据，往前找最近的可用交易日"""
+    # 先检查缓存
+    cache_path = f'{CACHE_DIR}/mv_data_{preferred_date}.json'
+    if os.path.exists(cache_path):
+        return preferred_date
+    
+    # 尝试从API获取
+    data = tushare_call('bak_basic', {'trade_date': preferred_date}, 'ts_code')
+    if data and data.get('records'):
+        return preferred_date
+    
+    # 往前回退最多5个自然日
+    d = datetime.strptime(preferred_date, '%Y%m%d')
+    for _ in range(5):
+        d -= timedelta(days=1)
+        dt_str = d.strftime('%Y%m%d')
+        cache_path = f'{CACHE_DIR}/mv_data_{dt_str}.json'
+        if os.path.exists(cache_path):
+            return dt_str
+        data = tushare_call('bak_basic', {'trade_date': dt_str}, 'ts_code')
+        if data and data.get('records'):
+            return dt_str
+    
+    return preferred_date  # fallback
 
 def fetch_mv_data(trade_date):
     """拉取市值数据（从缓存或API）"""
@@ -196,9 +222,14 @@ def main():
     print('A股 市值>200亿 每日自动刷新')
     print('=' * 60)
     
-    # Step 1: Get latest trade date
-    trade_date = get_latest_trade_date()
-    print(f'\nLatest trade date: {trade_date}')
+    # Step 1: Get latest trade date (with fallback)
+    preferred_date = get_latest_trade_date()
+    print(f'\nPreferred trade date: {preferred_date}')
+    trade_date = find_available_trade_date(preferred_date)
+    if trade_date != preferred_date:
+        print(f'  No data for {preferred_date}, falling back to {trade_date}')
+    else:
+        print(f'Latest trade date: {trade_date}')
     
     # Step 2: Fetch market value
     print('\n[1/5] Market Value Data')
@@ -220,8 +251,32 @@ def main():
     annual_data = recalc_ytd(trade_date)
     print(f'  {len(annual_data)} stocks with annual data')
     
-    # Step 5: Merge all data
-    print('\n[4/5] Merging all data')
+    # Step 5: Auto-update AH status (best-effort)
+    print('\n[4/6] Auto-update AH status')
+    try:
+        # Call update_ah_status_v2.py if exists
+        ah_updater = os.path.join(DATA_DIR, 'update_ah_status_v2.py')
+        if os.path.exists(ah_updater):
+            r = subprocess.run([sys.executable, ah_updater],
+                               capture_output=True, text=True, timeout=120,
+                               cwd=DATA_DIR)
+            if r.returncode == 0:
+                print('  AH status auto-updated.')
+            else:
+                print(f'  AH update skipped: {r.stderr[:100]}')
+        else:
+            # Try AKShare directly
+            try:
+                import akshare as ak
+                df = ak.stock_zh_ah_name()
+                print(f'  AKShare returned {len(df)} AH stocks')
+            except:
+                print('  AKShare not available, skipping AH update')
+    except Exception as e:
+        print(f'  AH update failed (non-critical): {e}')
+
+    # Step 6: Merge all data
+    print('\n[5/6] Merging all data')
     output = []
     for s in stocks:
         ts_code = s['ts_code']
