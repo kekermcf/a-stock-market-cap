@@ -304,6 +304,13 @@ body.mobile .modal-close{width:44px;height:44px;font-size:22px}
         <option value="5000">市值 > 5000亿</option>
         <option value="10000">市值 > 10000亿</option>
       </select>
+      <select id="ahFilter">
+        <option value="">全部状态</option>
+        <option value="listed">A+H</option>
+        <option value="announced">拟H股</option>
+        <option value="rumor">Rumor</option>
+        <option value="none">无动作</option>
+      </select>
     </div>
     <div class="table-wrap">
       <table>
@@ -565,9 +572,15 @@ function filterData() {
   var q = document.getElementById('searchInput').value.toLowerCase();
   var ind = document.getElementById('industryFilter').value;
   var mv = +document.getElementById('mvFilter').value;
+  var ahVal = document.getElementById('ahFilter').value;
   filtered = allData.filter(function(r) {
     if (r.total_mv < mv) return false;
     if (ind && r.industry !== ind) return false;
+    if (ahVal) {
+      var s = ahStatus[r.ts_code] || '';
+      if (ahVal === 'none') { if (s) return false; }
+      else { if (s !== ahVal) return false; }
+    }
     if (q) {
       var t = (r.ts_code + r.name + (r.industry || '')).toLowerCase();
       if (t.indexOf(q) === -1) return false;
@@ -611,6 +624,7 @@ document.getElementById('stockTableBody').addEventListener('click', function(e) 
 document.getElementById('searchInput').addEventListener('input', filterData);
 document.getElementById('industryFilter').addEventListener('change', filterData);
 document.getElementById('mvFilter').addEventListener('change', filterData);
+document.getElementById('ahFilter').addEventListener('change', filterData);
 
 // ========== Modal ==========
 function openModal(tsCode) {
