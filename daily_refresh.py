@@ -257,7 +257,8 @@ def main():
         # Call update_ah_status_v2.py if exists
         ah_updater = os.path.join(DATA_DIR, 'update_ah_status_v2.py')
         if os.path.exists(ah_updater):
-            r = subprocess.run([sys.executable, ah_updater],
+            import subprocess as sp_ah
+            r = sp_ah.run([sys.executable, ah_updater],
                                capture_output=True, text=True, timeout=120,
                                cwd=DATA_DIR)
             if r.returncode == 0:
@@ -334,23 +335,28 @@ def main():
     
     # Step 6: Generate HTML
     print('\n[5/5] Generating HTML report')
-    # Update gen_report.py's trade_date in output filename
-    # We'll call gen_report.py directly
-    os.system(f'"{sys.executable}" "{DATA_DIR}/gen_report.py"')
+    import subprocess as sp
+    r = sp.run([sys.executable, f'{DATA_DIR}/gen_report.py'], capture_output=True, text=True, cwd=DATA_DIR, timeout=300)
+    if r.returncode == 0:
+        print(f'  {r.stdout.strip()}')
+    else:
+        print(f'  Error: {r.stderr.strip()[:300]}')
     
     # Step 7: Git push to GitHub Pages
     print('\n[6/6] Pushing to GitHub Pages')
     try:
         env = os.environ.copy()
         env['GIT_SSH_COMMAND'] = 'ssh -o StrictHostKeyChecking=accept-new'
-        import subprocess
+        import subprocess as sp2
+        # Use full git path since it may not be in PATH on Windows
+        git_exe = os.environ.get('GIT_EXE', r'C:\Program Files\Git\cmd\git.exe')
         cmds = [
-            ['git', 'add', '-A'],
-            ['git', 'commit', '-m', f'Auto update: {trade_date}'],
-            ['git', 'push', 'origin', 'main'],
+            [git_exe, 'add', '-A'],
+            [git_exe, 'commit', '-m', f'Auto update: {trade_date}'],
+            [git_exe, 'push', 'origin', 'main'],
         ]
         for cmd in cmds:
-            result = subprocess.run(cmd, capture_output=True, text=True, cwd=DATA_DIR, env=env, timeout=60)
+            result = sp2.run(cmd, capture_output=True, text=True, cwd=DATA_DIR, env=env, timeout=60)
             if result.returncode != 0 and 'nothing to commit' not in result.stdout and 'nothing to commit' not in result.stderr:
                 if 'no changes added' not in result.stdout and 'no changes added' not in result.stderr:
                     print(f'  Warning: {" ".join(cmd)}: {result.stderr.strip()[:200]}')
