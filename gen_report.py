@@ -379,7 +379,7 @@ function rateCls(v) {{
 }}
 
 function render() {{
-  PAGE_SIZE = document.body.classList.contains('mobile') ? 30 : 60;
+  PAGE_SIZE = document.body.classList.contains('mobile') ? 20 : 60;
   var tbody = document.getElementById('stockTableBody');
   if (!tbody) return;
   var s = (curPage - 1) * PAGE_SIZE;
