@@ -139,6 +139,107 @@ def fetch_mv_data(trade_date):
     
     return stocks
 
+def fetch_mv_via_qq(trade_date):
+    """通过腾讯K线API推算最新市值（Tushare不可用时的fallback）"""
+    # 1. 找到最新的缓存mv_data作为基准
+    existing = sorted(glob.glob(f'{CACHE_DIR}/mv_data_*.json'))
+    if not existing:
+        print('  No cached mv_data to use as baseline')
+        return None
+    baseline_path = existing[-1]
+    base_date = os.path.basename(baseline_path).replace('mv_data_', '').replace('.json', '')
+    with open(baseline_path, 'r', encoding='utf-8') as f:
+        base_stocks = json.load(f)
+    
+    print(f'  Using {base_date} data as baseline ({len(base_stocks)} stocks), updating via QQ K-line...')
+    
+    # Build code lookup: ts_code -> old data
+    old_map = {}
+    for s in base_stocks:
+        ts_code = s['ts_code']
+        code6, qq_code = parse_ts_code(ts_code)
+        old_map[ts_code] = {
+            'old_mv': float(s.get('total_mv', 0)),
+            'old_close': float(s.get('close', 0)),
+            'qq_code': qq_code
+        }
+    
+    def get_latest_from_qq(qq_code):
+        """获取最新收盘价和涨跌幅"""
+        try:
+            resp = requests.get(QQ_URL, params={
+                '_var': 'k', 'param': f'{qq_code},day,2026-04-20,,15,qfq'
+            }, headers=QQ_HEADERS, timeout=10)
+            text = resp.text
+            idx = text.index('=')
+            j = json.loads(text[idx+1:])
+            klines = j['data'][qq_code].get('qfqday', [])
+            if not klines:
+                return None, None
+            # 取最新一条
+            latest = klines[-1]
+            close = float(latest[2])
+            # 计算涨跌幅（相对于前一天）
+            if len(klines) >= 2:
+                prev_close = float(klines[-2][2])
+                pct = round((close - prev_close) / prev_close * 100, 2)
+            else:
+                pct = 0
+            return close, pct
+        except:
+            return None, None
+    
+    # 并发获取最新价格
+    updated = []
+    errors = 0
+    codes = list(old_map.keys())
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        futures = {executor.submit(get_latest_from_qq, old_map[c]['qq_code']): c for c in codes}
+        for fut in concurrent.futures.as_completed(futures):
+            ts_code = futures[fut]
+            old = old_map[ts_code]
+            new_close, new_pct = fut.result()
+            if new_close and old['old_close'] > 0:
+                # 新市值 = 旧市值 × (新价格 / 旧价格)
+                ratio = new_close / old['old_close']
+                new_mv = round(old['old_mv'] * ratio, 2)
+            else:
+                new_close = old['old_close']
+                new_mv = old['old_mv']
+                new_pct = 0
+                errors += 1
+            
+            # 读取原始stock记录并更新
+            base_s = next((s for s in base_stocks if s['ts_code'] == ts_code), None)
+            if base_s:
+                updated.append({
+                    'ts_code': ts_code,
+                    'name': base_s.get('name', ''),
+                    'industry': base_s.get('industry', ''),
+                    'area': base_s.get('area', ''),
+                    'close': new_close,
+                    'pct_chg': new_pct,
+                    'pe': base_s.get('pe', ''),
+                    'pb': base_s.get('pb', ''),
+                    'total_mv': new_mv,
+                })
+    
+    # Filter mv >= 200B
+    updated = [s for s in updated if s['total_mv'] >= 200]
+    updated.sort(key=lambda x: x['total_mv'], reverse=True)
+    
+    if errors > 0:
+        print(f'  {errors} stocks failed to update, using old close prices')
+    print(f'  Updated {len(updated)} stocks via QQ K-line')
+    
+    # Save cache
+    cache_path = f'{CACHE_DIR}/mv_data_{trade_date}.json'
+    with open(cache_path, 'w', encoding='utf-8') as f:
+        json.dump(updated, f, ensure_ascii=False)
+    
+    return updated
+
 def fetch_finance_data(stocks):
     """从缓存获取财务数据"""
     cache_path = f'{CACHE_DIR}/finance_data.json'
@@ -262,6 +363,10 @@ def main():
     # Step 2: Fetch market value
     print('\n[1/5] Market Value Data')
     stocks = fetch_mv_data(trade_date)
+    if not stocks:
+        # Tushare不可用，尝试QQ K-line fallback
+        print('  Tushare unavailable, trying QQ K-line fallback...')
+        stocks = fetch_mv_via_qq(trade_date)
     if not stocks:
         print('No market data available. Exiting.')
         return
