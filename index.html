@@ -524,10 +524,6 @@ function toggleView() {
   var isMobile = body.classList.toggle('mobile');
   document.getElementById('viewIcon').textContent = isMobile ? '💻' : '📱';
   document.getElementById('viewLabel').textContent = isMobile ? '桌面版' : '手机版';
-  // Re-bind click events for mobile cards
-  if (isMobile) {
-    document.getElementById('mobileList').addEventListener('click', handleMobileClick);
-  }
   curPage = 1;
   render();
 }
@@ -832,6 +828,10 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') docum
   var label = document.getElementById('viewLabel');
   if (icon) icon.textContent = isMb ? '💻' : '📱';
   if (label) label.textContent = isMb ? '桌面版' : '手机版';
+  // 自动检测为手机版时绑定点击事件（toggleView中也会绑，这里补上初始加载的情况）
+  if (isMb) {
+    document.getElementById('mobileList').addEventListener('click', handleMobileClick);
+  }
 })();
 
 try {
