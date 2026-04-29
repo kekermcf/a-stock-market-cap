@@ -150,7 +150,7 @@ tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3),tbody td:nth-c
 .ind-bar-fill{{height:100%;background:linear-gradient(90deg,#4338ca,#6366f1);border-radius:4px;transition:width .3s}}
 .ind-count{{color:#888;font-size:13px;min-width:50px;text-align:right}}
 .ind-mv{{font-weight:600;color:#c0392b;min-width:100px;text-align:right;font-size:13px}}
-.pagination{{padding:16px 20px;display:flex;justify-content:center;align-items:flex-start;gap:6px;flex-wrap:wrap}}
+.pagination{{padding:8px 20px 14px;display:flex;justify-content:flex-start;align-items:flex-start;gap:6px;flex-wrap:wrap;border-bottom:1px solid #eee;margin-bottom:2px}}
 .page-btn{{padding:6px 14px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:13px}}
 .page-btn:hover{{background:#f0f0f0}}
 .page-btn.active{{background:#1a1a2e;color:#fff;border-color:#1a1a2e}}
@@ -286,6 +286,7 @@ body.mobile .modal-close{{width:44px;height:44px;font-size:22px}}
         <option value="none">无动作</option>
       </select>
     </div>
+    <div class="pagination" id="pagination"></div>
     <div class="table-wrap">
       <table>
         <thead><tr>
@@ -306,7 +307,6 @@ body.mobile .modal-close{{width:44px;height:44px;font-size:22px}}
       </table>
       <div class="mobile-list" id="mobileList"></div>
     </div>
-    <div class="pagination" id="pagination"></div>
   </div>
 
   <div class="stats">
