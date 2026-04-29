@@ -558,7 +558,7 @@ function renderPg() {
     var mh = '';
     var mRng = [];
     for (var mi = 1; mi <= total; mi++) {
-      if (mi === 1 || mi === total || Math.abs(mi - curPage) <= 1) mRng.push(mi);
+      if (mi === 1 || mi === total || Math.abs(mi - curPage) <= 2) mRng.push(mi);
       else if (mRng[mRng.length-1] !== '..') mRng.push('..');
     }
     for (var mj = 0; mj < mRng.length; mj++) {
