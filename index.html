@@ -65,11 +65,17 @@ tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3),tbody td:nth-c
 .ind-bar-fill{height:100%;background:linear-gradient(90deg,#4338ca,#6366f1);border-radius:4px;transition:width .3s}
 .ind-count{color:#888;font-size:13px;min-width:50px;text-align:right}
 .ind-mv{font-weight:600;color:#c0392b;min-width:100px;text-align:right;font-size:13px}
-.pagination{padding:16px 20px;display:flex;justify-content:center;align-items:center;gap:8px}
+.pagination{padding:16px 20px;display:flex;justify-content:center;align-items:flex-start;gap:6px;flex-wrap:wrap}
 .page-btn{padding:6px 14px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:13px}
 .page-btn:hover{background:#f0f0f0}
 .page-btn.active{background:#1a1a2e;color:#fff;border-color:#1a1a2e}
 .page-info{font-size:13px;color:#888}
+.page-btn-wrap{display:inline-flex;flex-direction:column;align-items:center;gap:2px}
+.page-mv-label{font-size:10px;color:#999;line-height:1}
+.goto-wrap{display:inline-flex;align-items:center;gap:4px;margin-left:8px}
+.goto-input{width:48px;padding:4px 6px;border:1px solid #ddd;border-radius:6px;font-size:13px;text-align:center;outline:none}
+.goto-input:focus{border-color:#0f3460}
+.goto-btn{padding:4px 10px;font-size:12px}
 .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;justify-content:center;align-items:center}
 .modal-overlay.active{display:flex}
 .modal{background:#fff;border-radius:16px;width:94%;max-width:1000px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative}
@@ -413,6 +419,8 @@ var filtered = allData.slice();
 var curPage = 1;
 var sortKey = 'total_mv';
 var sortDir = -1;
+var savedPage = 1;  // 记住清筛选前的页码位置
+var lastFilterActive = false;  // 上一次是否有筛选条件
 
 function numfmt(v, d) {
   d = d || 0;
@@ -536,6 +544,16 @@ function renderPg() {
   var el = document.getElementById('pagination');
   if (total <= 1) { el.innerHTML = ''; return; }
   var isMobile = document.body.classList.contains('mobile');
+  // 预计算每页最大市值（filtered已按当前排序）
+  var pageMv = [];
+  for (var pi = 0; pi < total; pi++) {
+    var first = filtered[pi * PAGE_SIZE];
+    pageMv.push(first ? Math.round(first.total_mv) : 0);
+  }
+  function mvLabel(p) {
+    var v = pageMv[p - 1];
+    return v >= 10000 ? (v / 10000).toFixed(1) + '万亿' : v.toLocaleString() + '亿';
+  }
   if (isMobile) {
     el.innerHTML = '<button class="page-btn" onclick="go(' + (curPage-1) + ')"' + (curPage===1?' disabled':'') + '>上一页</button>' +
       '<span class="page-info">' + curPage + ' / ' + total + ' 页</span>' +
@@ -551,11 +569,21 @@ function renderPg() {
   for (var j = 0; j < rng.length; j++) {
     var p = rng[j];
     if (p === '..') h += '<span class="page-info">...</span>';
-    else h += '<button class="page-btn ' + (p===curPage?'active':'') + '" onclick="go(' + p + ')">' + p + '</button>';
+    else h += '<div class="page-btn-wrap"><button class="page-btn ' + (p===curPage?'active':'') + '" onclick="go(' + p + ')">' + p + '</button><div class="page-mv-label">' + mvLabel(p) + '</div></div>';
   }
   h += '<button class="page-btn" onclick="go(' + (curPage+1) + ')"' + (curPage===total?' disabled':'') + '>下一页</button>';
   h += '<span class="page-info">' + curPage + '/' + total + '页</span>';
+  h += '<div class="goto-wrap"><span class="page-info">跳转</span><input type="number" class="goto-input" id="gotoInput" min="1" max="' + total + '" placeholder="' + curPage + '"><button class="page-btn goto-btn" onclick="goToPage()">Go</button></div>';
   el.innerHTML = h;
+  var gInput = document.getElementById('gotoInput');
+  if (gInput) gInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') goToPage(); });
+}
+
+function goToPage() {
+  var v = parseInt(document.getElementById('gotoInput').value);
+  var t = Math.ceil(filtered.length / PAGE_SIZE);
+  if (isNaN(v) || v < 1 || v > t) return;
+  go(v);
 }
 
 function go(p) {
@@ -573,6 +601,18 @@ function filterData() {
   var ind = document.getElementById('industryFilter').value;
   var mv = +document.getElementById('mvFilter').value;
   var ahVal = document.getElementById('ahFilter').value;
+  var isFiltered = !!(q || ind || mv > 200 || ahVal);
+
+  // 有筛选→记住当前页；无筛选（清空了）→恢复到之前的页码
+  if (isFiltered && !lastFilterActive) {
+    savedPage = curPage;
+  } else if (!isFiltered && lastFilterActive) {
+    curPage = savedPage;
+  } else if (isFiltered) {
+    curPage = 1;
+  }
+  lastFilterActive = isFiltered;
+
   filtered = allData.filter(function(r) {
     if (r.total_mv < mv) return false;
     if (ind && r.industry !== ind) return false;
@@ -588,7 +628,6 @@ function filterData() {
     return true;
   });
   doSort();
-  curPage = 1;
   render();
 }
 
