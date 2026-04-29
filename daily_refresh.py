@@ -6,7 +6,7 @@
 3. 重新计算涨跌幅
 4. 生成HTML报告
 """
-import json, requests, time, concurrent.futures, os, sys, csv
+import json, requests, time, concurrent.futures, os, sys, csv, glob
 from datetime import datetime, timedelta
 
 DATA_DIR = 'c:/Users/LG-NB/WorkBuddy/20260425113716'
@@ -64,47 +64,75 @@ def get_latest_trade_date():
 
 def find_available_trade_date(preferred_date):
     """如果指定日期没有数据，往前找最近的可用交易日"""
-    # 先检查缓存
+    # 先检查缓存的mv_data文件（最可靠的判断标准）
     cache_path = f'{CACHE_DIR}/mv_data_{preferred_date}.json'
     if os.path.exists(cache_path):
         return preferred_date
     
-    # 尝试从API获取
-    data = tushare_call('bak_basic', {'trade_date': preferred_date}, 'ts_code')
+    # 尝试从API获取（带完整字段验证，不仅要records还要有total_mv）
+    data = tushare_call('bak_basic', {'trade_date': preferred_date}, 'ts_code,total_mv')
     if data and data.get('records'):
-        return preferred_date
+        # 验证至少有一些股票有市值数据
+        has_mv = any(r.get('total_mv') for r in data['records'][:10])
+        if has_mv:
+            return preferred_date
+        print(f'  API returned records for {preferred_date} but no total_mv data, trying earlier...')
     
-    # 往前回退最多5个自然日
+    # 往前回退最多10个自然日
     d = datetime.strptime(preferred_date, '%Y%m%d')
-    for _ in range(5):
+    for _ in range(10):
         d -= timedelta(days=1)
         dt_str = d.strftime('%Y%m%d')
+        # 优先检查本地缓存
         cache_path = f'{CACHE_DIR}/mv_data_{dt_str}.json'
         if os.path.exists(cache_path):
+            print(f'  Using cached data from {dt_str}')
             return dt_str
-        data = tushare_call('bak_basic', {'trade_date': dt_str}, 'ts_code')
+        # 再尝试API
+        data = tushare_call('bak_basic', {'trade_date': dt_str}, 'ts_code,total_mv')
         if data and data.get('records'):
-            return dt_str
+            has_mv = any(r.get('total_mv') for r in data['records'][:10])
+            if has_mv:
+                return dt_str
+    
+    print(f'  No available data found in the past 10 days, using cached data if any...')
+    # Last resort: find any existing mv_data cache file
+    import glob
+    existing = sorted(glob.glob(f'{CACHE_DIR}/mv_data_*.json'), reverse=True)
+    if existing:
+        date_str = os.path.basename(existing[0]).replace('mv_data_', '').replace('.json', '')
+        print(f'  Using latest cached data from {date_str}')
+        return date_str
     
     return preferred_date  # fallback
 
 def fetch_mv_data(trade_date):
     """拉取市值数据（从缓存或API）"""
     cache_path = f'{CACHE_DIR}/mv_data_{trade_date}.json'
+    
+    # Always check cache first
     if os.path.exists(cache_path):
         with open(cache_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            stocks = json.load(f)
+            if stocks:
+                print(f'  Loaded {len(stocks)} stocks from cache ({trade_date})')
+                return stocks
     
-    # Get basic stock list
+    # Get basic stock list from API
     data = tushare_call('bak_basic', {'trade_date': trade_date}, 'ts_code,name,industry,area,total_mv,pe,pb,close,pct_chg')
     if not data or not data.get('records'):
-        print(f'  No data for {trade_date}, trying previous day...')
+        print(f'  API returned no records for {trade_date}')
         return None
     
     stocks = data['records']
     # Filter mv >= 200
     stocks = [s for s in stocks if s.get('total_mv') and float(s['total_mv']) >= 200]
+    if not stocks:
+        print(f'  API returned records but no valid total_mv for {trade_date}')
+        return None
+    
     stocks.sort(key=lambda x: float(x.get('total_mv', 0)), reverse=True)
+    print(f'  Fetched {len(stocks)} stocks from API ({trade_date})')
     
     with open(cache_path, 'w', encoding='utf-8') as f:
         json.dump(stocks, f, ensure_ascii=False)
