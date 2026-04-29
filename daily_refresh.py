@@ -13,7 +13,6 @@ DATA_DIR = 'c:/Users/LG-NB/WorkBuddy/20260425113716'
 CACHE_DIR = f'{DATA_DIR}/cache'
 os.makedirs(CACHE_DIR, exist_ok=True)
 
-TUSHARE_TOKEN = '0ea302669814ada44d52d64f5fb924b5f4ffd50215924322229eb54b'
 QQ_URL = 'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get'
 QQ_HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
 EM_URL = 'https://datacenter.eastmoney.com/securities/api/data/v1/get'
@@ -28,72 +27,84 @@ def parse_ts_code(ts_code):
         return parts[0], parts[1].lower() + parts[0]
     return ts_code, ts_code
 
-def tushare_call(api_name, params=None, fields=''):
-    import urllib.request
-    payload = json.dumps({
-        'api_name': api_name, 'token': TUSHARE_TOKEN,
-        'params': params or {}, 'fields': fields
-    })
-    req = urllib.request.Request(
-        'https://api.tsws.org/v1/tushare',
-        data=payload.encode('utf-8'),
-        headers={'Content-Type': 'application/json'},
-        method='POST'
-    )
+# 交易日检测用样本股（大盘蓝筹，必然每个交易日都有K线）
+_TRADE_DATE_SAMPLES = ['sh600519', 'sz000001', 'sz000858']  # 茅台、平安银行、五粮液
+
+def _check_kline_exists(qq_code, date_str):
+    """用QQ K-line检查某日期是否有交易数据"""
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            j = json.loads(resp.read().decode('utf-8'))
-            return j.get('data', {})
+        # date_str 是 YYYYMMDD，转成 YYYY-MM-DD 格式匹配K线
+        target = f'{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}'
+        # 查最近10天K线
+        resp = requests.get(QQ_URL, params={
+            '_var': 'k', 'param': f'{qq_code},day,2026-04-15,,20,qfq'
+        }, headers=QQ_HEADERS, timeout=10)
+        text = resp.text
+        idx = text.index('=')
+        j = json.loads(text[idx+1:])
+        klines = j['data'][qq_code].get('qfqday', [])
+        # 检查最后几条K线日期是否包含目标日期
+        for k in klines[-5:]:
+            if k[0] == target:
+                return True
+        return False
     except:
-        return {}
+        return None  # 异常时返回None（不确定）
 
 def get_latest_trade_date():
-    """获取最新交易日（当日的bak_basic数据可能还没出来，自动回退）"""
-    # 用Tushare交易日历
-    today = datetime.now().strftime('%Y%m%d')
-    data = tushare_call('trade_cal', {'exchange': 'SSE', 'start_date': '20260420', 'end_date': today}, 'cal_date,is_open')
-    if data and data.get('records'):
-        for rec in reversed(data['records']):
-            if rec.get('is_open') == 1:
-                return rec['cal_date']
-    # Fallback: 用上一个工作日
+    """获取最新交易日：跳过周末后用QQ K-line交叉验证（兼顾节假日）"""
     d = datetime.now()
-    while d.weekday() >= 5:  # skip weekend
+    # 如果是早上9点前，T日数据可能还没出来，从T-1开始试
+    if d.hour < 9:
         d -= timedelta(days=1)
-    return d.strftime('%Y%m%d')
+    
+    for _ in range(15):  # 最多回退15天
+        if d.weekday() >= 5:  # 跳过周末
+            d -= timedelta(days=1)
+            continue
+        date_str = d.strftime('%Y%m%d')
+        
+        # 用样本股交叉验证
+        ok_count = 0
+        for qq_code in _TRADE_DATE_SAMPLES:
+            result = _check_kline_exists(qq_code, date_str)
+            if result is True:
+                ok_count += 1
+            elif result is False:
+                pass  # 明确没有数据
+            else:
+                ok_count += 0.5  # 不确定时给半票
+        
+        if ok_count >= 2:  # 至少2只股票确认有数据
+            print(f'  Verified trade date: {date_str} ({ok_count:.1f}/3 samples ok)')
+            return date_str
+        
+        d -= timedelta(days=1)
+    
+    # 兜底：纯周末跳过
+    d = datetime.now()
+    while d.weekday() >= 5:
+        d -= timedelta(days=1)
+    fallback = d.strftime('%Y%m%d')
+    print(f'  WARNING: K-line verification failed, using fallback: {fallback}')
+    return fallback
 
 def find_available_trade_date(preferred_date):
-    """如果指定日期没有数据，往前找最近的可用交易日"""
-    # 先检查缓存的mv_data文件（最可靠的判断标准）
+    """如果指定日期缓存不存在，往前找最近的可用缓存（不调Tushare，已挂）"""
+    # 先检查缓存的mv_data文件
     cache_path = f'{CACHE_DIR}/mv_data_{preferred_date}.json'
     if os.path.exists(cache_path):
         return preferred_date
     
-    # 尝试从API获取（带完整字段验证，不仅要records还要有total_mv）
-    data = tushare_call('bak_basic', {'trade_date': preferred_date}, 'ts_code,total_mv')
-    if data and data.get('records'):
-        # 验证至少有一些股票有市值数据
-        has_mv = any(r.get('total_mv') for r in data['records'][:10])
-        if has_mv:
-            return preferred_date
-        print(f'  API returned records for {preferred_date} but no total_mv data, trying earlier...')
-    
-    # 往前回退最多10个自然日
+    # 往前回退最多10个自然日，找缓存
     d = datetime.strptime(preferred_date, '%Y%m%d')
     for _ in range(10):
         d -= timedelta(days=1)
         dt_str = d.strftime('%Y%m%d')
-        # 优先检查本地缓存
         cache_path = f'{CACHE_DIR}/mv_data_{dt_str}.json'
         if os.path.exists(cache_path):
             print(f'  Using cached data from {dt_str}')
             return dt_str
-        # 再尝试API
-        data = tushare_call('bak_basic', {'trade_date': dt_str}, 'ts_code,total_mv')
-        if data and data.get('records'):
-            has_mv = any(r.get('total_mv') for r in data['records'][:10])
-            if has_mv:
-                return dt_str
     
     print(f'  No available data found in the past 10 days, using cached data if any...')
     # Last resort: find any existing mv_data cache file
@@ -107,37 +118,16 @@ def find_available_trade_date(preferred_date):
     return preferred_date  # fallback
 
 def fetch_mv_data(trade_date):
-    """拉取市值数据（从缓存或API）"""
+    """拉取市值数据（从缓存；无缓存时返回None，由QQ fallback接管）"""
     cache_path = f'{CACHE_DIR}/mv_data_{trade_date}.json'
-    
-    # Always check cache first
     if os.path.exists(cache_path):
         with open(cache_path, 'r', encoding='utf-8') as f:
             stocks = json.load(f)
             if stocks:
                 print(f'  Loaded {len(stocks)} stocks from cache ({trade_date})')
                 return stocks
-    
-    # Get basic stock list from API
-    data = tushare_call('bak_basic', {'trade_date': trade_date}, 'ts_code,name,industry,area,total_mv,pe,pb,close,pct_chg')
-    if not data or not data.get('records'):
-        print(f'  API returned no records for {trade_date}')
-        return None
-    
-    stocks = data['records']
-    # Filter mv >= 200
-    stocks = [s for s in stocks if s.get('total_mv') and float(s['total_mv']) >= 200]
-    if not stocks:
-        print(f'  API returned records but no valid total_mv for {trade_date}')
-        return None
-    
-    stocks.sort(key=lambda x: float(x.get('total_mv', 0)), reverse=True)
-    print(f'  Fetched {len(stocks)} stocks from API ({trade_date})')
-    
-    with open(cache_path, 'w', encoding='utf-8') as f:
-        json.dump(stocks, f, ensure_ascii=False)
-    
-    return stocks
+    print(f'  No cache for {trade_date}, will use QQ fallback')
+    return None
 
 def fetch_mv_via_qq(trade_date):
     """通过腾讯K线API推算最新市值（Tushare不可用时的fallback）
