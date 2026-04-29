@@ -55,8 +55,19 @@ for r in results:
         'regions': r.get('regions', []),
     })
 
+# Load A+H code mapping
+ah_code_map = {}
+ah_map_path = f'{DATA_DIR}/cache/ah_code_map.json'
+if os.path.exists(ah_map_path):
+    with open(ah_map_path, 'r', encoding='utf-8') as f:
+        ah_code_map = json.load(f)
+# Inject hk_code into embed_data
+for d in embed_data:
+    d['hk_code'] = ah_code_map.get(d['ts_code'], '')
+
 rj = json.dumps(embed_data, ensure_ascii=True)
 aj = json.dumps(ah_status, ensure_ascii=True)
+cj = json.dumps(ah_code_map, ensure_ascii=True)
 
 # Industry stats
 industry_stats = {}
@@ -124,6 +135,7 @@ tbody tr.ah-rumor:hover{{background:#ebe1f0}}
 tbody td{{padding:10px 8px;white-space:nowrap;text-align:right}}
 tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3),tbody td:nth-child(4){{text-align:left}}
 .code{{font-family:'SF Mono','Consolas',monospace;font-size:13px;color:#666}}
+.hk-code{{font-family:'SF Mono','Consolas',monospace;font-size:11px;color:#f39c12;line-height:1.2}}
 .mv{{font-weight:600;color:#c0392b}}
 .chg-up{{color:#c0392b;font-weight:500}}
 .chg-dn{{color:#27ae60;font-weight:500}}
@@ -237,6 +249,7 @@ body.mobile .modal-close{{width:44px;height:44px;font-size:22px}}
 .mc-info{{display:flex;gap:16px;font-size:13px;color:#888;align-items:center}}
 .mc-info span{{white-space:nowrap}}
 .mc-info .code{{font-family:'SF Mono','Consolas',monospace;font-size:12px}}
+.hk-code-m{{font-family:'SF Mono','Consolas',monospace;font-size:11px;color:#f39c12}}
 .mc-ytd{{display:flex;gap:8px;margin-top:8px}}
 .mc-ytd-item{{font-size:13px;white-space:nowrap}}
 .mc-ytd-item .year-label{{color:#888;margin-right:2px}}
@@ -345,6 +358,7 @@ window.onerror = function(msg, url, line) {{
 
 var allData = {rj};
 var ahStatus = {aj};  // A+H status: "listed", "announced", or "rumor"
+var ahCodeMap = {cj};  // A-share code -> H-share code
 // 预计算每只股票按市值降序的原始排名
 var mvRank = {{}};
 var sorted = allData.slice().sort(function(a, b) {{ return b.total_mv - a.total_mv; }});
@@ -399,7 +413,7 @@ function render() {{
     var npCls = r.net_profit != null ? (r.net_profit >= 0 ? 'fin-pos' : 'fin-neg') : '';
     rows.push('<tr data-code="' + r.ts_code + '" class="' + ahClass.trim() + '">' +
       '<td>' + rk + '</td>' +
-      '<td class="code">' + r.ts_code + '</td>' +
+      '<td class="code">' + r.ts_code + (r.hk_code ? '<br><span class="hk-code">' + r.hk_code + '.HK</span>' : '') + '</td>' +
       '<td><b>' + r.name + '</b>' + ahTag + '</td>' +
       '<td>' + (r.industry || '-') + '</td>' +
       '<td class="mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '</td>' +
@@ -439,6 +453,7 @@ function renderMobileList(pd) {{
         '</div>' +
         '<div class="mc-info">' +
           '<span class="code">' + r.ts_code + '</span>' +
+          (r.hk_code ? '<span class="hk-code-m">' + r.hk_code + '.HK</span>' : '') +
           '<span>' + (r.industry || '-') + '</span>' +
         '</div>' +
         '<div class="mc-ytd">' +
@@ -616,7 +631,8 @@ function openModal(tsCode) {{
   }}
   if (!stock) return;
 
-  document.getElementById('modalTitle').textContent = stock.name + '\uff08' + tsCode + '\uff09';
+  var hkCode = stock.hk_code || '';
+  document.getElementById('modalTitle').textContent = stock.name + '\uff08' + tsCode + (hkCode ? ' / ' + hkCode + '.HK' : '') + '\uff09';
   var subText = stock.industry;
   if (stock.industry_l1 && stock.industry_l1 !== stock.industry) {{
     subText += '  |  ' + stock.industry_l1;
