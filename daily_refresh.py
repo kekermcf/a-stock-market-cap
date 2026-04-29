@@ -140,12 +140,14 @@ def fetch_mv_data(trade_date):
     return stocks
 
 def fetch_mv_via_qq(trade_date):
-    """通过腾讯K线API推算最新市值（Tushare不可用时的fallback）"""
+    """通过腾讯K线API推算最新市值（Tushare不可用时的fallback）
+    返回 (stocks_list, actual_date_str) 元组
+    """
     # 1. 找到最新的缓存mv_data作为基准
     existing = sorted(glob.glob(f'{CACHE_DIR}/mv_data_*.json'))
     if not existing:
         print('  No cached mv_data to use as baseline')
-        return None
+        return None, None
     baseline_path = existing[-1]
     base_date = os.path.basename(baseline_path).replace('mv_data_', '').replace('.json', '')
     with open(baseline_path, 'r', encoding='utf-8') as f:
@@ -164,6 +166,29 @@ def fetch_mv_via_qq(trade_date):
             'qq_code': qq_code
         }
     
+    # 先抽样检查实际最新K线日期（用前3只股票）
+    sample_codes = list(old_map.keys())[:3]
+    actual_kline_date = None
+    for sc in sample_codes:
+        try:
+            resp = requests.get(QQ_URL, params={
+                '_var': 'k', 'param': f'{old_map[sc]["qq_code"]},day,2026-04-20,,5,qfq'
+            }, headers=QQ_HEADERS, timeout=10)
+            text = resp.text
+            idx = text.index('=')
+            j = json.loads(text[idx+1:])
+            klines = j['data'][old_map[sc]['qq_code']].get('qfqday', [])
+            if klines:
+                d = klines[-1][0].replace('-', '')
+                actual_kline_date = d
+                break
+        except:
+            pass
+    if actual_kline_date:
+        print(f'  QQ K-line latest date: {actual_kline_date}')
+    else:
+        actual_kline_date = trade_date
+    
     def get_latest_from_qq(qq_code):
         """获取最新收盘价和涨跌幅"""
         try:
@@ -175,31 +200,35 @@ def fetch_mv_via_qq(trade_date):
             j = json.loads(text[idx+1:])
             klines = j['data'][qq_code].get('qfqday', [])
             if not klines:
-                return None, None
+                return None, None, None
             # 取最新一条
             latest = klines[-1]
             close = float(latest[2])
+            kline_date = latest[0].replace('-', '')
             # 计算涨跌幅（相对于前一天）
             if len(klines) >= 2:
                 prev_close = float(klines[-2][2])
                 pct = round((close - prev_close) / prev_close * 100, 2)
             else:
                 pct = 0
-            return close, pct
+            return close, pct, kline_date
         except:
-            return None, None
+            return None, None, None
     
     # 并发获取最新价格
     updated = []
     errors = 0
     codes = list(old_map.keys())
+    date_counts = {}  # 统计实际K线日期分布
     
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         futures = {executor.submit(get_latest_from_qq, old_map[c]['qq_code']): c for c in codes}
         for fut in concurrent.futures.as_completed(futures):
             ts_code = futures[fut]
             old = old_map[ts_code]
-            new_close, new_pct = fut.result()
+            new_close, new_pct, kline_date = fut.result()
+            if kline_date:
+                date_counts[kline_date] = date_counts.get(kline_date, 0) + 1
             if new_close and old['old_close'] > 0:
                 # 新市值 = 旧市值 × (新价格 / 旧价格)
                 ratio = new_close / old['old_close']
@@ -225,7 +254,13 @@ def fetch_mv_via_qq(trade_date):
                     'total_mv': new_mv,
                 })
     
-    # Filter mv >= 200B
+    # 确定实际数据日期（多数股票的K线日期）
+    if date_counts:
+        actual_date = max(date_counts, key=date_counts.get)
+    else:
+        actual_date = actual_kline_date
+    print(f'  K-line date distribution: {date_counts}')
+    print(f'  Using actual date: {actual_date}')
     updated = [s for s in updated if s['total_mv'] >= 200]
     updated.sort(key=lambda x: x['total_mv'], reverse=True)
     
@@ -233,12 +268,12 @@ def fetch_mv_via_qq(trade_date):
         print(f'  {errors} stocks failed to update, using old close prices')
     print(f'  Updated {len(updated)} stocks via QQ K-line')
     
-    # Save cache
-    cache_path = f'{CACHE_DIR}/mv_data_{trade_date}.json'
+    # Save cache — 用实际K线日期，不是preferred_date
+    cache_path = f'{CACHE_DIR}/mv_data_{actual_date}.json'
     with open(cache_path, 'w', encoding='utf-8') as f:
         json.dump(updated, f, ensure_ascii=False)
     
-    return updated
+    return updated, actual_date
 
 def fetch_finance_data(stocks):
     """从缓存获取财务数据"""
@@ -366,20 +401,23 @@ def main():
     if not stocks:
         # Tushare不可用，尝试QQ K-line fallback
         print('  Tushare unavailable, trying QQ K-line fallback...')
-        stocks = fetch_mv_via_qq(trade_date)
+        result = fetch_mv_via_qq(preferred_date)
+        if result[0]:
+            stocks = result[0]
+            trade_date = result[1]  # 用实际K线日期
     elif trade_date != preferred_date:
         # 回退到了旧日期，尝试用QQ K-line更新到最新交易日
         print(f'  Data date {trade_date} is older than preferred {preferred_date}, trying QQ update...')
-        updated = fetch_mv_via_qq(preferred_date)
-        if updated and len(updated) >= len(stocks) * 0.9:  # 至少90%的股票更新成功
-            stocks = updated
-            trade_date = preferred_date
+        result = fetch_mv_via_qq(preferred_date)
+        if result[0] and len(result[0]) >= len(stocks) * 0.9:  # 至少90%的股票更新成功
+            stocks = result[0]
+            trade_date = result[1]  # 用实际K线日期
         else:
-            print(f'  QQ update insufficient ({len(updated) if updated else 0} stocks), keeping cached data')
+            print(f'  QQ update insufficient ({len(result[0]) if result[0] else 0} stocks), keeping cached data')
     if not stocks:
         print('No market data available. Exiting.')
         return
-    print(f'  {len(stocks)} stocks with MV >= 200B')
+    print(f'  {len(stocks)} stocks with MV >= 200B (data as of {trade_date})')
     
     # Step 3: Load cached data
     print('\n[2/5] Finance & Profile Data (from cache)')
