@@ -493,9 +493,18 @@ function renderPg() {{
     return v >= 10000 ? (v / 10000).toFixed(1) + '\u4e07\u4ebf' : v.toLocaleString() + '\u4ebf';
   }}
   if (isMobile) {{
-    el.innerHTML = '<button class="page-btn" onclick="go(' + (curPage-1) + ')"' + (curPage===1?' disabled':'') + '>\u4e0a\u4e00\u9875</button>' +
-      '<span class="page-info">' + curPage + ' / ' + total + ' \u9875</span>' +
-      '<button class="page-btn" onclick="go(' + (curPage+1) + ')"' + (curPage===total?' disabled':'') + '>\u4e0b\u4e00\u9875</button>';
+    var mh = '';
+    var mRng = [];
+    for (var mi = 1; mi <= total; mi++) {{
+      if (mi === 1 || mi === total || Math.abs(mi - curPage) <= 1) mRng.push(mi);
+      else if (mRng[mRng.length-1] !== '..') mRng.push('..');
+    }}
+    for (var mj = 0; mj < mRng.length; mj++) {{
+      var mp = mRng[mj];
+      if (mp === '..') mh += '<span class="page-info">...</span>';
+      else mh += '<div class="page-btn-wrap"><button class="page-btn ' + (mp===curPage?'active':'') + '" onclick="go(' + mp + ')">' + mp + '</button><div class="page-mv-label">' + mvLabel(mp) + '</div></div>';
+    }}
+    el.innerHTML = mh;
     return;
   }}
   var h = '<button class="page-btn" onclick="go(' + (curPage-1) + ')"' + (curPage===1?' disabled':'') + '>\u4e0a\u4e00\u9875</button>';
