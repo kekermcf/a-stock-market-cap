@@ -367,6 +367,15 @@ def main():
         # Tushare不可用，尝试QQ K-line fallback
         print('  Tushare unavailable, trying QQ K-line fallback...')
         stocks = fetch_mv_via_qq(trade_date)
+    elif trade_date != preferred_date:
+        # 回退到了旧日期，尝试用QQ K-line更新到最新交易日
+        print(f'  Data date {trade_date} is older than preferred {preferred_date}, trying QQ update...')
+        updated = fetch_mv_via_qq(preferred_date)
+        if updated and len(updated) >= len(stocks) * 0.9:  # 至少90%的股票更新成功
+            stocks = updated
+            trade_date = preferred_date
+        else:
+            print(f'  QQ update insufficient ({len(updated) if updated else 0} stocks), keeping cached data')
     if not stocks:
         print('No market data available. Exiting.')
         return
