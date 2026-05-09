@@ -165,9 +165,19 @@ body.mobile .modal-close{width:44px;height:44px;font-size:22px}
 .fav-star:hover{transform:scale(1.3)}
 .fav-star.on{color:#f39c12}
 .fav-star.off{color:#ccc}
+/* Sanction tag */
+.sanction-tag{display:inline-block;cursor:pointer;font-size:12px;padding:0 5px;user-select:none;transition:transform .2s;vertical-align:middle;margin-left:4px;border-radius:3px;font-weight:600;letter-spacing:1px}
+.sanction-tag:hover{transform:scale(1.2)}
+.sanction-tag.on{background:#c0392b;color:#fff;font-size:10px}
+.sanction-tag.off{color:#ddd;font-size:14px}
+/* Mobile back-to-top */
+.back-top{display:none;width:100%;padding:14px 0;text-align:center;background:#f0f2f5;color:#555;font-size:15px;font-weight:600;border:none;cursor:pointer;border-radius:10px;margin-top:12px;letter-spacing:2px}
+body.mobile .back-top{display:block}
 /* Mobile watchlist tweaks */
 body.mobile .fav-star{font-size:20px;padding:4px 8px}
 body.mobile .watch-btn{padding:6px 12px;font-size:13px;margin-right:8px}
+body.mobile .sanction-tag{font-size:14px;padding:2px 6px}
+body.mobile .sanction-tag.on{font-size:11px}
 </style>
 </head>
 <body>
@@ -349,6 +359,7 @@ body.mobile .watch-btn{padding:6px 12px;font-size:13px;margin-right:8px}
         <tbody id="stockTableBody"></tbody>
       </table>
       <div class="mobile-list" id="mobileList"></div>
+      <button class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">⬆ 回到顶端</button>
     </div>
   </div>
 
@@ -474,7 +485,7 @@ function render() {
     rows.push('<tr data-code="' + r.ts_code + '" class="' + ahClass.trim() + '">' +
       '<td>' + rk + '</td>' +
       '<td class="code">' + r.ts_code + (r.hk_code ? '<br><span class="hk-code">' + r.hk_code + '.HK</span>' : '') + '</td>' +
-      '<td><b>' + r.name + '</b>' + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">☆</span></td>' +
+      '<td><b>' + r.name + '</b>' + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">☆</span><span class="sanction-tag off" data-code="' + r.ts_code + '">⛔</span></td>' +
       '<td>' + (r.industry || '-') + '</td>' +
       '<td class="mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '</td>' +
       '<td>' + ytdHtml(r.ytd_2024) + '</td>' +
@@ -492,6 +503,7 @@ function render() {
   document.getElementById('countBadge').textContent = filtered.length + ' 只';
   renderPg();
   updateFavStars();
+  updateSanctionTags();
 }
 
 function renderMobileList(pd) {
@@ -509,7 +521,7 @@ function renderMobileList(pd) {
     cards.push(
       '<div class="mobile-card' + ahClass + '" data-code="' + r.ts_code + '">' +
         '<div class="mc-top">' +
-          '<div class="mc-name" style="display:flex;align-items:center;gap:4px">' + r._rank + '. ' + r.name + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">☆</span></div>' +
+          '<div class="mc-name" style="display:flex;align-items:center;gap:4px">' + r._rank + '. ' + r.name + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">☆</span><span class="sanction-tag off" data-code="' + r.ts_code + '">⛔</span></div>' +
           '<div class="mc-mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '亿</div>' +
         '</div>' +
         '<div class="mc-info">' +
@@ -546,6 +558,11 @@ function handleMobileClick(e) {
   if (e.target.classList.contains('fav-star')) {
     e.stopPropagation();
     toggleFav(e.target.getAttribute('data-code'));
+    return;
+  }
+  if (e.target.classList.contains('sanction-tag')) {
+    e.stopPropagation();
+    toggleSanction(e.target.getAttribute('data-code'));
     return;
   }
   var card = e.target.closest('.mobile-card');
@@ -681,6 +698,11 @@ document.getElementById('stockTableBody').addEventListener('click', function(e) 
   if (e.target.classList.contains('fav-star')) {
     e.stopPropagation();
     toggleFav(e.target.getAttribute('data-code'));
+    return;
+  }
+  if (e.target.classList.contains('sanction-tag')) {
+    e.stopPropagation();
+    toggleSanction(e.target.getAttribute('data-code'));
     return;
   }
   var tr = e.target.closest('tr');
@@ -897,6 +919,45 @@ function updateFavStars() {
     } else {
       s.textContent = '☆';
       s.className = 'fav-star off';
+    }
+  }
+}
+
+// ========== 美国制裁清单标注 ==========
+var SC_KEY = 'keke_sanction_list';
+var sanctionList = [];
+
+function loadSanctionList() {
+  try {
+    var raw = localStorage.getItem(SC_KEY);
+    sanctionList = raw ? JSON.parse(raw) : [];
+  } catch(e) { sanctionList = []; }
+  return sanctionList;
+}
+loadSanctionList();
+
+function toggleSanction(tsCode) {
+  var idx = sanctionList.indexOf(tsCode);
+  if (idx >= 0) {
+    sanctionList.splice(idx, 1);
+  } else {
+    sanctionList.push(tsCode);
+  }
+  localStorage.setItem(SC_KEY, JSON.stringify(sanctionList));
+  updateSanctionTags();
+}
+
+function updateSanctionTags() {
+  var tags = document.querySelectorAll('.sanction-tag');
+  for (var i = 0; i < tags.length; i++) {
+    var t = tags[i];
+    var code = t.getAttribute('data-code');
+    if (sanctionList.indexOf(code) >= 0) {
+      t.textContent = 'US制裁';
+      t.className = 'sanction-tag on';
+    } else {
+      t.textContent = '⛔';
+      t.className = 'sanction-tag off';
     }
   }
 }

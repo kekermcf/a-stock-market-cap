@@ -140,6 +140,16 @@ tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3),tbody td:nth-c
 .empty-msg{{text-align:center;padding:60px 20px;color:#999;font-size:16px}}
 .empty-msg a{{color:#e67e22;text-decoration:none;font-weight:600}}
 .empty-msg a:hover{{text-decoration:underline}}
+/* Sanction tag */
+.sanction-tag{{display:inline-block;cursor:pointer;font-size:12px;padding:0 5px;user-select:none;transition:transform .2s;vertical-align:middle;margin-left:4px;border-radius:3px;font-weight:600;letter-spacing:1px}}
+.sanction-tag:hover{{transform:scale(1.2)}}
+.sanction-tag.on{{background:#c0392b;color:#fff;font-size:10px}}
+.sanction-tag.off{{color:#ddd;font-size:14px}}
+body.mobile .sanction-tag{{font-size:14px;padding:2px 6px}}
+body.mobile .sanction-tag.on{{font-size:11px}}
+/* Back to top */
+.back-top{{width:100%;padding:14px 0;text-align:center;background:#f0f2f5;color:#555;font-size:15px;font-weight:600;border:none;cursor:pointer;border-radius:10px;margin-top:12px;letter-spacing:2px}}
+body:not(.mobile) .back-top{{display:none}}
 /* Modal */
 .modal-overlay{{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:1000;justify-content:center;align-items:center}}
 .modal-overlay.active{{display:flex}}
@@ -262,6 +272,7 @@ body.mobile .modal-close{{width:44px;height:44px;font-size:22px}}
           <tbody id="wlTableBody"></tbody>
         </table>
         <div class="mobile-list" id="wlMobileList"></div>
+        <button class="back-top" onclick="window.scrollTo({{top:0,behavior:'smooth'}})">⬆ 回到顶端</button>
       </div>
     </div>
     <div class="data-source">数据来源：Tushare Pro · 腾讯财经API · 东方财富 · NeoData | 仅供参考，不构成投资建议</div>
@@ -417,7 +428,7 @@ function renderWatchlist() {{
     rows.push('<tr data-code="' + r.ts_code + '" class="' + ahClass.trim() + '">' +
       '<td>' + r._rank + '</td>' +
       '<td class="code">' + r.ts_code + (r.hk_code ? '<br><span class="hk-code">' + r.hk_code + '.HK</span>' : '') + '</td>' +
-      '<td><b>' + r.name + '</b>' + ahTag + '</td>' +
+      '<td><b>' + r.name + '</b>' + ahTag + '<span class="sanction-tag off" data-code="' + r.ts_code + '">\u26d4</span></td>' +
       '<td>' + (r.industry || '-') + '</td>' +
       '<td class="mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '</td>' +
       '<td>' + ytdHtml(r.ytd_2024) + '</td>' +
@@ -443,7 +454,7 @@ function renderWatchlist() {{
       '<div class="mobile-card' + ahClass + '" data-code="' + r.ts_code + '">' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start">' +
           '<div style="flex:1">' +
-            '<div class="mc-name">' + r._rank + '. ' + r.name + ahTag + '</div>' +
+            '<div class="mc-name">' + r._rank + '. ' + r.name + ahTag + '<span class="sanction-tag off" data-code="' + r.ts_code + '">\u26d4</span></div>' +
             '<div class="mc-info">' +
               '<span class="code">' + r.ts_code + '</span>' +
               (r.hk_code ? '<span class="hk-code-m">' + r.hk_code + '.HK</span>' : '') +
@@ -472,6 +483,11 @@ document.getElementById('wlTableBody').addEventListener('click', function(e) {{
     removeFav(e.target.getAttribute('data-code'));
     return;
   }}
+  if (e.target.classList.contains('sanction-tag')) {{
+    e.stopPropagation();
+    toggleSanction(e.target.getAttribute('data-code'));
+    return;
+  }}
   var tr = e.target.closest('tr');
   if (!tr) return;
   var code = tr.getAttribute('data-code');
@@ -484,11 +500,62 @@ document.getElementById('wlMobileList').addEventListener('click', function(e) {{
     removeFav(e.target.getAttribute('data-code'));
     return;
   }}
+  if (e.target.classList.contains('sanction-tag')) {{
+    e.stopPropagation();
+    toggleSanction(e.target.getAttribute('data-code'));
+    return;
+  }}
   var card = e.target.closest('.mobile-card');
   if (!card) return;
   var code = card.getAttribute('data-code');
   if (code) openModal(code);
 }});
+
+// ========== Sanction list ==========
+var SC_KEY = 'keke_sanction_list';
+var sanctionList = [];
+
+function loadSanctionList() {{
+  try {{
+    var raw = localStorage.getItem(SC_KEY);
+    sanctionList = raw ? JSON.parse(raw) : [];
+  }} catch(e) {{ sanctionList = []; }}
+  return sanctionList;
+}}
+loadSanctionList();
+
+function toggleSanction(tsCode) {{
+  var idx = sanctionList.indexOf(tsCode);
+  if (idx >= 0) {{
+    sanctionList.splice(idx, 1);
+  }} else {{
+    sanctionList.push(tsCode);
+  }}
+  localStorage.setItem(SC_KEY, JSON.stringify(sanctionList));
+  updateSanctionTags();
+}}
+
+function updateSanctionTags() {{
+  var tags = document.querySelectorAll('.sanction-tag');
+  for (var i = 0; i < tags.length; i++) {{
+    var t = tags[i];
+    var code = t.getAttribute('data-code');
+    if (sanctionList.indexOf(code) >= 0) {{
+      t.textContent = 'US\u5236\u88c1';
+      t.className = 'sanction-tag on';
+    }} else {{
+      t.textContent = '\u26d4';
+      t.className = 'sanction-tag off';
+    }}
+  }}
+}}
+
+// Update sanction tags after render
+var origRenderWL = renderWatchlist;
+renderWatchlist = function() {{
+  origRenderWL();
+  updateSanctionTags();
+}};
 
 // ========== Modal (same logic as main page) ==========
 function openModal(tsCode) {{
