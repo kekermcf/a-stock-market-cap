@@ -504,13 +504,21 @@ def main():
         writer.writerows(output)
     
     # Step 6: Generate HTML
-    print('\n[5/5] Generating HTML report')
+    print('\n[5/6] Generating HTML report')
     import subprocess as sp
     r = sp.run([sys.executable, f'{DATA_DIR}/gen_report.py'], capture_output=True, text=True, cwd=DATA_DIR, timeout=300)
     if r.returncode == 0:
         print(f'  {r.stdout.strip()}')
     else:
         print(f'  Error: {r.stderr.strip()[:300]}')
+
+    # Generate watchlist page
+    print('  Generating watchlist page...')
+    r2 = sp.run([sys.executable, f'{DATA_DIR}/gen_watchlist.py'], capture_output=True, text=True, cwd=DATA_DIR, timeout=300)
+    if r2.returncode == 0:
+        print(f'  {r2.stdout.strip()}')
+    else:
+        print(f'  Watchlist Error: {r2.stderr.strip()[:300]}')
     
     # Step 7: Git push to GitHub Pages
     print('\n[6/6] Pushing to GitHub Pages')
