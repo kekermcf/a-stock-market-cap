@@ -1022,7 +1022,6 @@ document.getElementById('wlMobileList').addEventListener('click', function(e) {{
   var code = card.getAttribute('data-code');
   if (code) openModal(code);
 }});
-" 2>&1
 
 try {{
   filterData();
