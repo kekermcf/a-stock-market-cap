@@ -158,6 +158,32 @@ body.mobile .modal-close{width:44px;height:44px;font-size:22px}
 .mc-ytd-item{font-size:13px;white-space:nowrap}
 .mc-ytd-item .year-label{color:#888;margin-right:2px}
 .mc-fin{display:flex;gap:16px;margin-top:6px;font-size:12px;color:#666}
+/* Watchlist */
+.watch-btn{background:linear-gradient(135deg,#f39c12,#e67e22);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:14px;cursor:pointer;margin-right:12px;font-weight:600}
+.watch-btn:hover{opacity:.9}
+.fav-star{display:inline-block;cursor:pointer;font-size:16px;padding:0 6px;user-select:none;transition:transform .2s}
+.fav-star:hover{transform:scale(1.3)}
+.fav-star.on{color:#f39c12}
+.fav-star.off{color:#ccc}
+.pwd-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:2000;justify-content:center;align-items:center}
+.pwd-overlay.active{display:flex}
+.pwd-box{background:#fff;border-radius:16px;padding:32px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);max-width:360px;width:90%}
+.pwd-box h3{font-size:20px;margin-bottom:8px;color:#1a1a2e}
+.pwd-box .sub{font-size:13px;color:#888;margin-bottom:20px}
+.pwd-box input{width:100%;padding:12px 16px;border:2px solid #ddd;border-radius:10px;font-size:18px;text-align:center;outline:none;margin-bottom:16px}
+.pwd-box input:focus{border-color:#f39c12}
+.pwd-box button{background:linear-gradient(135deg,#f39c12,#e67e22);color:#fff;border:none;border-radius:10px;padding:10px 40px;font-size:16px;cursor:pointer;font-weight:600}
+.pwd-box .pwd-err{color:#c0392b;font-size:13px;margin-top:8px;display:none}
+.watchlist-section{display:none;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:24px;overflow:hidden}
+.watchlist-section.active{display:block}
+.watchlist-section .section-title{background:linear-gradient(135deg,#f39c12,#e67e22);color:#fff}
+.watchlist-section .section-title .badge{background:rgba(255,255,255,.3);color:#fff}
+.watchlist-empty{text-align:center;padding:40px;color:#999;font-size:15px}
+.ws-remove{cursor:pointer;color:#e74c3c;font-size:14px;padding:2px 6px}
+.ws-remove:hover{opacity:.7}
+/* Mobile watchlist tweaks */
+body.mobile .fav-star{font-size:20px;padding:4px 8px}
+body.mobile .watch-btn{padding:6px 12px;font-size:13px;margin-right:8px}
 </style>
 </head>
 <body>
@@ -174,6 +200,7 @@ body.mobile .modal-close{width:44px;height:44px;font-size:22px}
       <span id="viewIcon">📱</span>
       <span id="viewLabel">手机版</span>
     </button>
+    <button class="watch-btn" onclick="showWatchlist()" title="keke自选股">⭐ 自选</button>
   </div>
 </div>
 
@@ -388,6 +415,37 @@ body.mobile .modal-close{width:44px;height:44px;font-size:22px}
   <div class="data-source">数据来源：Tushare Pro（基础数据） · 腾讯财经API（收盘价/K线） · 东方财富（2025年报） · NeoData（二级行业/公司简介） | 仅供参考，不构成投资建议</div>
 </div>
 
+<!-- ====== keke自选股 ====== -->
+<div class="pwd-overlay" id="pwdOverlay">
+  <div class="pwd-box">
+    <h3>⭐ keke自选股</h3>
+    <div class="sub">请输入密码查看自选股</div>
+    <input type="password" id="pwdInput" placeholder="密码" maxlength="20">
+    <button onclick="checkPwd()">确认</button>
+    <div class="pwd-err" id="pwdErr">密码错误</div>
+  </div>
+</div>
+
+<div class="watchlist-section" id="watchlistSection">
+  <div class="section-title">
+    ⭐ keke自选股
+    <span class="badge" id="wlBadge">0 只</span>
+    <span style="margin-left:auto;font-size:12px;font-weight:400;opacity:.8;cursor:pointer" onclick="document.getElementById('watchlistSection').classList.remove('active')">✕ 关闭</span>
+  </div>
+  <div class="watchlist-empty" id="wlEmpty">暂无自选股，在股票列表点击 ⭐ 即可添加</div>
+  <div class="table-wrap" id="wlTableWrap" style="display:none">
+    <table>
+      <thead><tr>
+        <th>排名</th><th>代码</th><th>名称</th><th>行业</th><th>总市值(亿)</th>
+        <th>2024至今</th><th>2025至今</th><th>2026至今</th>
+        <th>2025收入(亿)</th><th>毛利率</th><th>净利润(亿)</th><th>净利率</th><th>操作</th>
+      </tr></thead>
+      <tbody id="wlTableBody"></tbody>
+    </table>
+    <div class="mobile-list" id="wlMobileList"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <div class="modal-header">
@@ -463,7 +521,7 @@ function render() {
     rows.push('<tr data-code="' + r.ts_code + '" class="' + ahClass.trim() + '">' +
       '<td>' + rk + '</td>' +
       '<td class="code">' + r.ts_code + (r.hk_code ? '<br><span class="hk-code">' + r.hk_code + '.HK</span>' : '') + '</td>' +
-      '<td><b>' + r.name + '</b>' + ahTag + '</td>' +
+      '<td><b>' + r.name + '</b>' + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '" onclick="event.stopPropagation();toggleFav('' + r.ts_code + '')">☆</span></td>' +
       '<td>' + (r.industry || '-') + '</td>' +
       '<td class="mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '</td>' +
       '<td>' + ytdHtml(r.ytd_2024) + '</td>' +
@@ -480,6 +538,7 @@ function render() {
   renderMobileList(pd);
   document.getElementById('countBadge').textContent = filtered.length + ' 只';
   renderPg();
+  updateFavStars();
 }
 
 function renderMobileList(pd) {
@@ -497,7 +556,7 @@ function renderMobileList(pd) {
     cards.push(
       '<div class="mobile-card' + ahClass + '" data-code="' + r.ts_code + '">' +
         '<div class="mc-top">' +
-          '<div class="mc-name">' + r._rank + '. ' + r.name + ahTag + '</div>' +
+          '<div class="mc-name" style="display:flex;align-items:center;gap:4px">' + r._rank + '. ' + r.name + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '" onclick="event.stopPropagation();toggleFav('' + r.ts_code + '')">☆</span></div>' +
           '<div class="mc-mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '亿</div>' +
         '</div>' +
         '<div class="mc-info">' +
@@ -836,6 +895,183 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') docum
     document.getElementById('mobileList').addEventListener('click', handleMobileClick);
   }
 })();
+
+// ========== keke自选股 ==========
+var WL_KEY = 'keke_watchlist';
+var WL_PWD = 'keke';
+var watchlist = [];
+
+// 从localStorage加载自选股
+function loadWatchlist() {
+  try {
+    var raw = localStorage.getItem(WL_KEY);
+    watchlist = raw ? JSON.parse(raw) : [];
+  } catch(e) { watchlist = []; }
+  return watchlist;
+}
+loadWatchlist();
+
+// 切换收藏
+function toggleFav(tsCode) {
+  var idx = watchlist.indexOf(tsCode);
+  if (idx >= 0) {
+    watchlist.splice(idx, 1);
+  } else {
+    watchlist.push(tsCode);
+  }
+  localStorage.setItem(WL_KEY, JSON.stringify(watchlist));
+  updateFavStars();
+  renderWatchlist();
+}
+
+// 更新所有⭐按钮状态
+function updateFavStars() {
+  var stars = document.querySelectorAll('.fav-star');
+  for (var i = 0; i < stars.length; i++) {
+    var s = stars[i];
+    var code = s.getAttribute('data-code');
+    if (watchlist.indexOf(code) >= 0) {
+      s.textContent = '⭐';
+      s.className = 'fav-star on';
+    } else {
+      s.textContent = '☆';
+      s.className = 'fav-star off';
+    }
+  }
+  // Also update watchlist badge
+  document.getElementById('wlBadge').textContent = watchlist.length + ' 只';
+}
+
+// 显示自选股（先弹密码框）
+function showWatchlist() {
+  document.getElementById('pwdInput').value = '';
+  document.getElementById('pwdErr').style.display = 'none';
+  document.getElementById('pwdOverlay').classList.add('active');
+  setTimeout(function() { document.getElementById('pwdInput').focus(); }, 100);
+}
+
+// 密码校验
+function checkPwd() {
+  if (document.getElementById('pwdInput').value === WL_PWD) {
+    document.getElementById('pwdOverlay').classList.remove('active');
+    renderWatchlist();
+    var ws = document.getElementById('watchlistSection');
+    ws.classList.add('active');
+    ws.scrollIntoView({behavior: 'smooth'});
+  } else {
+    document.getElementById('pwdErr').style.display = 'block';
+    document.getElementById('pwdInput').value = '';
+    document.getElementById('pwdInput').focus();
+  }
+}
+document.getElementById('pwdInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') checkPwd();
+});
+document.getElementById('pwdOverlay').addEventListener('click', function(e) {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
+});
+
+// 渲染自选股表格
+function renderWatchlist() {
+  var wl = [];
+  for (var i = 0; i < watchlist.length; i++) {
+    var code = watchlist[i];
+    for (var j = 0; j < allData.length; j++) {
+      if (allData[j].ts_code === code) { wl.push(allData[j]); break; }
+    }
+  }
+  
+  var empty = document.getElementById('wlEmpty');
+  var wrap = document.getElementById('wlTableWrap');
+  var badge = document.getElementById('wlBadge');
+  badge.textContent = wl.length + ' 只';
+  
+  if (wl.length === 0) {
+    empty.style.display = 'block';
+    wrap.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  wrap.style.display = 'block';
+  
+  // Desktop table
+  var rows = [];
+  for (var i = 0; i < wl.length; i++) {
+    var r = wl[i];
+    var ah = ahStatus[r.ts_code] || '';
+    var ahClass = ah === 'listed' ? ' ah-listed' : ah === 'announced' ? ' ah-announced' : ah === 'rumor' ? ' ah-rumor' : '';
+    var ahTag = ah === 'listed' ? ' <span class="ah-tag listed">A+H</span>' : ah === 'announced' ? ' <span class="ah-tag announced">拟H股</span>' : ah === 'rumor' ? ' <span class="ah-tag rumor">Rumor</span>' : '';
+    rows.push('<tr data-code="' + r.ts_code + '" class="' + ahClass.trim() + '">' +
+      '<td>' + r._rank + '</td>' +
+      '<td class="code">' + r.ts_code + (r.hk_code ? '<br><span class="hk-code">' + r.hk_code + '.HK</span>' : '') + '</td>' +
+      '<td><b>' + r.name + '</b>' + ahTag + '</td>' +
+      '<td>' + (r.industry || '-') + '</td>' +
+      '<td class="mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '</td>' +
+      '<td>' + ytdHtml(r.ytd_2024) + '</td>' +
+      '<td>' + ytdHtml(r.ytd_2025) + '</td>' +
+      '<td>' + ytdHtml(r.ytd_2026) + '</td>' +
+      '<td>' + (r.revenue != null ? numfmt(r.revenue, 1) : '<span class="pending">暂无</span>') + '</td>' +
+      '<td class="' + rateCls(r.gpr) + '">' + (r.gpr != null ? Math.round(r.gpr) + '%' : '<span class="pending">-</span>') + '</td>' +
+      '<td class="' + (r.net_profit != null ? (r.net_profit >= 0 ? 'fin-pos' : 'fin-neg') : '') + '">' + (r.net_profit != null ? numfmt(r.net_profit, 0) : '<span class="pending">暂无</span>') + '</td>' +
+      '<td class="' + rateCls(r.npm) + '">' + (r.npm != null ? Math.round(r.npm) + '%' : '<span class="pending">-</span>') + '</td>' +
+      '<td><span class="ws-remove" data-code="' + r.ts_code + '" title="移出自选">✕</span></td>' +
+      '</tr>');
+  }
+  document.getElementById('wlTableBody').innerHTML = rows.join('');
+  
+  // Mobile cards
+  var mobileCards = [];
+  for (var i = 0; i < wl.length; i++) {
+    var r = wl[i];
+    var ah = ahStatus[r.ts_code] || '';
+    var ahClass = ah === 'listed' ? ' ah-listed' : ah === 'announced' ? ' ah-announced' : ah === 'rumor' ? ' ah-rumor' : '';
+    var ahTag = ah === 'listed' ? ' <span class="ah-tag listed">A+H</span>' : ah === 'announced' ? ' <span class="ah-tag announced">拟H股</span>' : ah === 'rumor' ? ' <span class="ah-tag rumor">Rumor</span>' : '';
+    mobileCards.push(
+      '<div class="mobile-card' + ahClass + '" data-code="' + r.ts_code + '">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start">' +
+          '<div style="flex:1">' +
+            '<div class="mc-name">' + r._rank + '. ' + r.name + ahTag + '</div>' +
+            '<div class="mc-info">' +
+              '<span class="code">' + r.ts_code + '</span>' +
+              (r.hk_code ? '<span class="hk-code-m">' + r.hk_code + '.HK</span>' : '') +
+              '<span>' + (r.industry || '-') + '</span>' +
+            '</div>' +
+            '<div class="mc-mv" style="margin-top:6px">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '亿</div>' +
+          '</div>' +
+          '<span class="ws-remove" data-code="' + r.ts_code + '" style="font-size:18px;padding:4px 8px">✕</span>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+  document.getElementById('wlMobileList').innerHTML = mobileCards.join('');
+}
+
+// Watchlist table click -> open modal
+document.getElementById('wlTableBody').addEventListener('click', function(e) {
+  if (e.target.classList.contains('ws-remove')) {
+    var code = e.target.getAttribute('data-code');
+    toggleFav(code);
+    return;
+  }
+  var tr = e.target.closest('tr');
+  if (!tr) return;
+  var code = tr.getAttribute('data-code');
+  if (code) openModal(code);
+});
+
+// Watchlist mobile list click
+document.getElementById('wlMobileList').addEventListener('click', function(e) {
+  if (e.target.classList.contains('ws-remove')) {
+    var code = e.target.getAttribute('data-code');
+    toggleFav(code);
+    return;
+  }
+  var card = e.target.closest('.mobile-card');
+  if (!card) return;
+  var code = card.getAttribute('data-code');
+  if (code) openModal(code);
+});
+" 2>&1
 
 try {
   filterData();
