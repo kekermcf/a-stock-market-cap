@@ -17,7 +17,11 @@ else:
 date_display = f'{trade_date[:4]}年{int(trade_date[4:6])}月{int(trade_date[6:8])}日'
 
 with open(f'{DATA_DIR}/stock_data_full.json', 'r', encoding='utf-8') as f:
-    results = json.load(f)
+    results_all = json.load(f)
+
+# Filter >= 100B
+results = [r for r in results_all if r.get('total_mv', 0) >= 100]
+print(f'{len(results)} stocks with MV >= 100B (from {len(results_all)} total)')
 
 # Load A+H status
 ah_status = {}
@@ -25,6 +29,13 @@ ah_path = f'{DATA_DIR}/cache/ah_status.json'
 if os.path.exists(ah_path):
     with open(ah_path, 'r', encoding='utf-8') as f:
         ah_status = json.load(f)
+
+# Load sanction list
+sanction_list = []
+sl_path = f'{DATA_DIR}/cache/sanction_list.json'
+if os.path.exists(sl_path):
+    with open(sl_path, 'r', encoding='utf-8') as f:
+        sanction_list = json.load(f)
 
 # Build data JSON
 embed_data = []
@@ -68,6 +79,7 @@ for d in embed_data:
 rj = json.dumps(embed_data, ensure_ascii=True)
 aj = json.dumps(ah_status, ensure_ascii=True)
 cj = json.dumps(ah_code_map, ensure_ascii=True)
+sj = json.dumps(sanction_list, ensure_ascii=True)
 
 # Industry stats
 industry_stats = {}
@@ -99,7 +111,7 @@ html = f"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>A股市值超200亿股票名单（{trade_date}）</title>
+<title>A股市值超100亿股票名单（{trade_date}）</title>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
@@ -266,6 +278,10 @@ body.mobile .modal-close{{width:44px;height:44px;font-size:22px}}
 .sanction-tag:hover{{transform:scale(1.2)}}
 .sanction-tag.on{{background:#c0392b;color:#fff;font-size:10px}}
 .sanction-tag.off{{color:#ddd;font-size:14px}}
+/* Sanction row highlight */
+tr.sanction-row{{background:#fde8e8!important}}
+tr.sanction-row:hover{{background:#f5c6c6!important}}
+.mobile-card.sanction-row{{background:#fde8e8!important}}
 /* Mobile back-to-top */
 .back-top{{display:none;width:100%;padding:14px 0;text-align:center;background:#f0f2f5;color:#555;font-size:15px;font-weight:600;border:none;cursor:pointer;border-radius:10px;margin-top:12px;letter-spacing:2px}}
 body.mobile .back-top{{display:block}}
@@ -282,7 +298,7 @@ body.mobile .sanction-tag.on{{font-size:11px}}
 <div class="header">
   <div style="display:flex;justify-content:space-between;align-items:flex-start">
     <div>
-      <h1>A股市值超200亿股票名单</h1>
+      <h1>A股市值超100亿股票名单</h1>
       <div class="date">数据截止：{date_display}（收盘）</div>
       <div class="method">市值：腾讯财经API x Tushare总股本 · 行业：NeoData二级行业 · 财务：东方财富（2025年报） · 点击行查看详情</div>
     </div>
@@ -305,12 +321,15 @@ body.mobile .sanction-tag.on{{font-size:11px}}
       <input type="text" class="search-box" id="searchInput" placeholder="搜索股票代码/名称/行业...">
       <select id="industryFilter"><option value="">全部行业</option>{ind_options}</select>
       <select id="mvFilter">
-        <option value="200">市值 > 200亿</option>
-        <option value="500">市值 > 500亿</option>
-        <option value="1000">市值 > 1000亿</option>
-        <option value="3000">市值 > 3000亿</option>
-        <option value="5000">市值 > 5000亿</option>
-        <option value="10000">市值 > 10000亿</option>
+        <option value="0">全部市值</option>
+        <option value="100">100亿以上</option>
+        <option value="100-200">100-200亿</option>
+        <option value="200-300">200-300亿</option>
+        <option value="300-500">300-500亿</option>
+        <option value="500-1000">500-1000亿</option>
+        <option value="1000-3000">1000-3000亿</option>
+        <option value="3000-5000">3000-5000亿</option>
+        <option value="5000">5000亿以上</option>
       </select>
       <select id="ahFilter">
         <option value="">全部状态</option>
@@ -345,7 +364,7 @@ body.mobile .sanction-tag.on{{font-size:11px}}
   </div>
 
   <div class="stats">
-    <div class="stat-card"><div class="label">市值超200亿股票总数</div><div class="value">{total_stocks}</div></div>
+    <div class="stat-card"><div class="label">市值超100亿股票总数</div><div class="value">{total_stocks}</div></div>
     <div class="stat-card"><div class="label">有2025年报数据</div><div class="value blue">{has_fin}</div></div>
     <div class="stat-card"><div class="label">最大市值</div><div class="value red">{max_mv} 亿</div></div>
     <div class="stat-card"><div class="label">平均市值</div><div class="value">{avg_mv} 亿</div></div>
@@ -381,6 +400,7 @@ window.onerror = function(msg, url, line) {{
 var allData = {rj};
 var ahStatus = {aj};  // A+H status: "listed", "announced", or "rumor"
 var ahCodeMap = {cj};  // A-share code -> H-share code
+var defaultSanction = {sj};  // Pre-loaded sanction list
 // 预计算每只股票按市值降序的原始排名
 var mvRank = {{}};
 var sorted = allData.slice().sort(function(a, b) {{ return b.total_mv - a.total_mv; }});
@@ -393,8 +413,6 @@ var filtered = allData.slice();
 var curPage = 1;
 var sortKey = 'total_mv';
 var sortDir = -1;
-var savedPage = 1;  // 记住清筛选前的页码位置
-var lastFilterActive = false;  // 上一次是否有筛选条件
 
 function numfmt(v, d) {{
   d = d || 0;
@@ -455,6 +473,7 @@ function render() {{
   renderPg();
   updateFavStars();
   updateSanctionTags();
+  updateSanctionRows();
 }}
 
 function renderMobileList(pd) {{
@@ -591,22 +610,24 @@ function go(p) {{
 function filterData() {{
   var q = document.getElementById('searchInput').value.toLowerCase();
   var ind = document.getElementById('industryFilter').value;
-  var mv = +document.getElementById('mvFilter').value;
+  var mvVal = document.getElementById('mvFilter').value;
   var ahVal = document.getElementById('ahFilter').value;
-  var isFiltered = !!(q || ind || mv > 200 || ahVal);
 
-  // 有筛选→记住当前页；无筛选（清空了）→恢复到之前的页码
-  if (isFiltered && !lastFilterActive) {{
-    savedPage = curPage;
-  }} else if (!isFiltered && lastFilterActive) {{
-    curPage = savedPage;
-  }} else if (isFiltered) {{
-    curPage = 1;
+  // Parse mv filter value (supports ranges like "100-200" and single values)
+  var mvMin = 0, mvMax = Infinity;
+  if (mvVal.indexOf('-') > 0) {{
+    var parts = mvVal.split('-');
+    mvMin = +parts[0];
+    mvMax = +parts[1];
+  }} else if (+mvVal > 0) {{
+    mvMin = +mvVal;
   }}
-  lastFilterActive = isFiltered;
 
+  var isFiltered = !!(q || ind || mvVal !== '0' || ahVal);
+
+  // Filter first, then check if current page is out of range
   filtered = allData.filter(function(r) {{
-    if (r.total_mv < mv) return false;
+    if (r.total_mv < mvMin || r.total_mv >= mvMax) return false;
     if (ind && r.industry !== ind) return false;
     if (ahVal) {{
       var s = ahStatus[r.ts_code] || '';
@@ -620,6 +641,11 @@ function filterData() {{
     return true;
   }});
   doSort();
+
+  // Fix: if current page exceeds filtered results, reset to page 1
+  var totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  if (curPage > totalPages) curPage = 1;
+
   render();
 }}
 
@@ -881,11 +907,21 @@ var sanctionList = [];
 function loadSanctionList() {{
   try {{
     var raw = localStorage.getItem(SC_KEY);
-    sanctionList = raw ? JSON.parse(raw) : [];
-  }} catch(e) {{ sanctionList = []; }}
+    var local = raw ? JSON.parse(raw) : [];
+    // Merge: defaultSanction (from data) + localStorage (user toggles)
+    var merged = defaultSanction.slice();
+    for (var i = 0; i < local.length; i++) {{
+      if (merged.indexOf(local[i]) < 0) merged.push(local[i]);
+    }}
+    sanctionList = merged;
+  }} catch(e) {{ sanctionList = defaultSanction.slice(); }}
   return sanctionList;
 }}
 loadSanctionList();
+
+function isSanctioned(tsCode) {{
+  return sanctionList.indexOf(tsCode) >= 0 || defaultSanction.indexOf(tsCode) >= 0;
+}}
 
 function toggleSanction(tsCode) {{
   var idx = sanctionList.indexOf(tsCode);
@@ -896,6 +932,7 @@ function toggleSanction(tsCode) {{
   }}
   localStorage.setItem(SC_KEY, JSON.stringify(sanctionList));
   updateSanctionTags();
+  updateSanctionRows();
 }}
 
 function updateSanctionTags() {{
@@ -913,6 +950,27 @@ function updateSanctionTags() {{
   }}
 }}
 
+function updateSanctionRows() {{
+  var rows = document.querySelectorAll('tr[data-code]');
+  for (var i = 0; i < rows.length; i++) {{
+    var code = rows[i].getAttribute('data-code');
+    if (sanctionList.indexOf(code) >= 0) {{
+      rows[i].classList.add('sanction-row');
+    }} else {{
+      rows[i].classList.remove('sanction-row');
+    }}
+  }}
+  var cards = document.querySelectorAll('.mobile-card[data-code]');
+  for (var i = 0; i < cards.length; i++) {{
+    var code = cards[i].getAttribute('data-code');
+    if (sanctionList.indexOf(code) >= 0) {{
+      cards[i].classList.add('sanction-row');
+    }} else {{
+      cards[i].classList.remove('sanction-row');
+    }}
+  }}
+}}
+
 try {{
   filterData();
   document.getElementById('jsError').style.display = 'none';
@@ -924,7 +982,7 @@ try {{
 </body>
 </html>"""
 
-output_path = f'{DATA_DIR}/A股市值超200亿名单_{trade_date}.html'
+output_path = f'{DATA_DIR}/A股市值超100亿名单_{trade_date}.html'
 with open(output_path, 'wb') as f:
     f.write(b'\xef\xbb\xbf')
     f.write(html.encode('utf-8'))

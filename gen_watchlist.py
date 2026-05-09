@@ -17,7 +17,10 @@ else:
 date_display = f'{trade_date[:4]}年{int(trade_date[4:6])}月{int(trade_date[6:8])}日'
 
 with open(f'{DATA_DIR}/stock_data_full.json', 'r', encoding='utf-8') as f:
-    results = json.load(f)
+    results_all = json.load(f)
+
+# Filter >= 100B
+results = [r for r in results_all if r.get('total_mv', 0) >= 100]
 
 # Load A+H status
 ah_status = {}
@@ -25,6 +28,13 @@ ah_path = f'{DATA_DIR}/cache/ah_status.json'
 if os.path.exists(ah_path):
     with open(ah_path, 'r', encoding='utf-8') as f:
         ah_status = json.load(f)
+
+# Load sanction list
+sanction_list = []
+sl_path = f'{DATA_DIR}/cache/sanction_list.json'
+if os.path.exists(sl_path):
+    with open(sl_path, 'r', encoding='utf-8') as f:
+        sanction_list = json.load(f)
 
 # Load A+H code mapping
 ah_code_map = {}
@@ -66,6 +76,7 @@ for r in results:
 rj = json.dumps(embed_data, ensure_ascii=True)
 aj = json.dumps(ah_status, ensure_ascii=True)
 cj = json.dumps(ah_code_map, ensure_ascii=True)
+sj = json.dumps(sanction_list, ensure_ascii=True)
 
 html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -147,6 +158,10 @@ tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3),tbody td:nth-c
 .sanction-tag.off{{color:#ddd;font-size:14px}}
 body.mobile .sanction-tag{{font-size:14px;padding:2px 6px}}
 body.mobile .sanction-tag.on{{font-size:11px}}
+/* Sanction row highlight */
+tr.sanction-row{{background:#fde8e8!important}}
+tr.sanction-row:hover{{background:#f5c6c6!important}}
+.mobile-card.sanction-row{{background:#fde8e8!important}}
 /* Back to top */
 .back-top{{width:100%;padding:14px 0;text-align:center;background:#f0f2f5;color:#555;font-size:15px;font-weight:600;border:none;cursor:pointer;border-radius:10px;margin-top:12px;letter-spacing:2px}}
 body:not(.mobile) .back-top{{display:none}}
@@ -300,6 +315,7 @@ window.onerror = function(msg, url, line) {{
 var allData = {rj};
 var ahStatus = {aj};
 var ahCodeMap = {cj};
+var defaultSanction = {sj};
 var mvRank = {{}};
 var sorted = allData.slice().sort(function(a, b) {{ return b.total_mv - a.total_mv; }});
 for (var ri = 0; ri < sorted.length; ri++) {{ mvRank[sorted[ri].ts_code] = ri + 1; }}
@@ -518,8 +534,13 @@ var sanctionList = [];
 function loadSanctionList() {{
   try {{
     var raw = localStorage.getItem(SC_KEY);
-    sanctionList = raw ? JSON.parse(raw) : [];
-  }} catch(e) {{ sanctionList = []; }}
+    var local = raw ? JSON.parse(raw) : [];
+    var merged = defaultSanction.slice();
+    for (var i = 0; i < local.length; i++) {{
+      if (merged.indexOf(local[i]) < 0) merged.push(local[i]);
+    }}
+    sanctionList = merged;
+  }} catch(e) {{ sanctionList = defaultSanction.slice(); }}
   return sanctionList;
 }}
 loadSanctionList();
@@ -533,6 +554,7 @@ function toggleSanction(tsCode) {{
   }}
   localStorage.setItem(SC_KEY, JSON.stringify(sanctionList));
   updateSanctionTags();
+  updateSanctionRows();
 }}
 
 function updateSanctionTags() {{
@@ -550,11 +572,27 @@ function updateSanctionTags() {{
   }}
 }}
 
+function updateSanctionRows() {{
+  var rows = document.querySelectorAll('tr[data-code]');
+  for (var i = 0; i < rows.length; i++) {{
+    var code = rows[i].getAttribute('data-code');
+    if (sanctionList.indexOf(code) >= 0) rows[i].classList.add('sanction-row');
+    else rows[i].classList.remove('sanction-row');
+  }}
+  var cards = document.querySelectorAll('.mobile-card[data-code]');
+  for (var i = 0; i < cards.length; i++) {{
+    var code = cards[i].getAttribute('data-code');
+    if (sanctionList.indexOf(code) >= 0) cards[i].classList.add('sanction-row');
+    else cards[i].classList.remove('sanction-row');
+  }}
+}}
+
 // Update sanction tags after render
 var origRenderWL = renderWatchlist;
 renderWatchlist = function() {{
   origRenderWL();
   updateSanctionTags();
+  updateSanctionRows();
 }};
 
 // ========== Modal (same logic as main page) ==========
