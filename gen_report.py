@@ -425,7 +425,7 @@ function render() {{
     rows.push('<tr data-code="' + r.ts_code + '" class="' + ahClass.trim() + '">' +
       '<td>' + rk + '</td>' +
       '<td class="code">' + r.ts_code + (r.hk_code ? '<br><span class="hk-code">' + r.hk_code + '.HK</span>' : '') + '</td>' +
-      '<td><b>' + r.name + '</b>' + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '" onclick="event.stopPropagation();toggleFav(\'' + r.ts_code + '\')">\u2606</span></td>' +
+      '<td><b>' + r.name + '</b>' + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span></td>' +
       '<td>' + (r.industry || '-') + '</td>' +
       '<td class="mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '</td>' +
       '<td>' + ytdHtml(r.ytd_2024) + '</td>' +
@@ -460,7 +460,7 @@ function renderMobileList(pd) {{
     cards.push(
       '<div class="mobile-card' + ahClass + '" data-code="' + r.ts_code + '">' +
         '<div class="mc-top">' +
-          '<div class="mc-name" style="display:flex;align-items:center;gap:4px">' + r._rank + '. ' + r.name + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '" onclick="event.stopPropagation();toggleFav(\'' + r.ts_code + '\')">\u2606</span></div>' +
+          '<div class="mc-name" style="display:flex;align-items:center;gap:4px">' + r._rank + '. ' + r.name + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span></div>' +
           '<div class="mc-mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '亿</div>' +
         '</div>' +
         '<div class="mc-info">' +
@@ -494,6 +494,11 @@ function toggleView() {{
 }}
 
 function handleMobileClick(e) {{
+  if (e.target.classList.contains('fav-star')) {{
+    e.stopPropagation();
+    toggleFav(e.target.getAttribute('data-code'));
+    return;
+  }}
   var card = e.target.closest('.mobile-card');
   if (!card) return;
   var code = card.getAttribute('data-code');
@@ -624,6 +629,11 @@ document.querySelectorAll('thead th[data-sort]').forEach(function(th) {{
 }});
 
 document.getElementById('stockTableBody').addEventListener('click', function(e) {{
+  if (e.target.classList.contains('fav-star')) {{
+    e.stopPropagation();
+    toggleFav(e.target.getAttribute('data-code'));
+    return;
+  }}
   var tr = e.target.closest('tr');
   if (!tr) return;
   var code = tr.getAttribute('data-code');
