@@ -19,6 +19,57 @@ date_display = f'{trade_date[:4]}年{int(trade_date[4:6])}月{int(trade_date[6:8
 with open(f'{DATA_DIR}/stock_data_full.json', 'r', encoding='utf-8') as f:
     results_all = json.load(f)
 
+# Merge 100-200B stocks from QQ qt data
+existing_codes = {r['ts_code'] for r in results_all}
+mv_100_200_path = f'{DATA_DIR}/cache/mv_100_200_data.json'
+if os.path.exists(mv_100_200_path):
+    with open(mv_100_200_path, 'r', encoding='utf-8') as f:
+        mv_mid = json.load(f)
+    # Load annual_pctchg for ytd data
+    pct_data = {}
+    pct_path = f'{DATA_DIR}/cache/annual_pctchg.json'
+    if os.path.exists(pct_path):
+        with open(pct_path, 'r', encoding='utf-8') as f:
+            pct_data = json.load(f)
+    mid_added = 0
+    for s in mv_mid:
+        code = s.get('ts_code', '')
+        if not code or code in existing_codes:
+            continue
+        if s.get('total_mv', 0) < 100:
+            continue
+        pct = pct_data.get(code, {})
+        results_all.append({
+            'ts_code': code,
+            'name': s.get('name', ''),
+            'industry': s.get('industry', ''),
+            'industry_l1': '',
+            'industry_l2': '',
+            'area': s.get('area', ''),
+            'close': s.get('close', 0),
+            'pct_chg': s.get('pct_chg', ''),
+            'pe': s.get('pe', ''),
+            'pb': s.get('pb', ''),
+            'total_mv': s.get('total_mv', 0),
+            'revenue': None,
+            'gross_profit': None,
+            'net_profit': None,
+            'gpr': None,
+            'npm': None,
+            'ytd_2024': pct.get('ytd_2024'),
+            'ytd_2025': pct.get('ytd_2025'),
+            'ytd_2026': pct.get('ytd_2026'),
+            'mv_history': None,
+            'list_date': '',
+            'business_desc': '',
+            'main_biz': '',
+            'products': [],
+            'regions': [],
+        })
+        existing_codes.add(code)
+        mid_added += 1
+    print(f'Merged {mid_added} stocks from 100-200B data')
+
 # Filter >= 100B
 results = [r for r in results_all if r.get('total_mv', 0) >= 100]
 print(f'{len(results)} stocks with MV >= 100B (from {len(results_all)} total)')
