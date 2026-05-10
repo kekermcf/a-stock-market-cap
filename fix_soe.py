@@ -1,5 +1,7 @@
-"""Fix SOE list v2: properly check both industry_l1 and industry_l2 fields,
-fix false positives (中国宝安), add missing securities & insurers."""
+"""Fix SOE list v3: comprehensive re-check of ALL stocks (not just empty ones).
+- Broader keyword matching for controller names
+- Properly handle 中国xxx集团/公司 pattern
+- Add state-backed companies with complex ownership (SMIC etc.)"""
 
 import json
 
@@ -15,7 +17,7 @@ with open(f'{DATA_DIR}/stock_data_full.json', 'r', encoding='utf-8') as f:
     all_stocks = json.load(f)
 
 name_map = {s['ts_code']: s['name'] for s in all_stocks}
-# Get ALL industry text (l1 + l2) for keyword matching
+
 def get_all_ind(s):
     parts = []
     if s.get('industry_l1'): parts.append(s['industry_l1'])
@@ -51,86 +53,136 @@ NON_SOE_CODES = {
     '688428.SH',  # 诺诚健华 (private, BIO-pharma)
     '688235.SH',  # 百济神州 (private)
     '688820.SH',  # C盛合
+    '601138.SH',  # 工业富联 (Foxconn)
+    '600007.SH',  # 中国国贸 (Kerry Properties, not SOE)
 }
 
-# === Additional known SOEs (that East Money has no data for) ===
+# === Additional known SOEs (API has no data or no matching keywords) ===
 KNOWN_SOE_EXTRA = {
-    # Major securities
+    # Major securities (API empty)
     '600030.SH',  # 中信证券
     '601066.SH',  # 中信建投
     '600958.SH',  # 东方证券
     '601901.SH',  # 方正证券
     '000783.SZ',  # 长江证券
     '601696.SH',  # 中银证券
-    # Insurance
+    # Insurance (API empty)
     '601601.SH',  # 中国太保
     '601336.SH',  # 新华保险
-    # 中国 prefix + strategic
-    '601138.SH',  # 工业富联 - NOT SOE (Foxconn), skip
+    # State-backed tech
+    '688981.SH',  # 中芯国际 (SMIC - 大基金/国资背景)
+    '688041.SH',  # 海光信息 (中科院背景)
+    '688256.SH',  # 寒武纪 (中科院背景)
 }
 
-# Remove 工业富联 from consideration
-if '601138.SH' in KNOWN_SOE_EXTRA:
-    KNOWN_SOE_EXTRA.remove('601138.SH')
+# === Broad SOE keyword matching ===
+SOE_CTRL_KEYWORDS = [
+    '国资委', '国有资产监督管理委员会', '国有资产管理局',
+    '财政部', '中华人民共和国财政部',
+    '人民政府', '省政府', '市政府', '县政府', '区政府', '自治区',
+    '中国投资有限责任公司', '中央汇金', '汇金投资',
+    '国务院', '中共中央',
+    '全国社会保障基金', '社保基金',
+    '国有资本', '国资运营', '国资经营', '国资管理', '国资控股',
+    '国有控股', '国有独资',
+    '中国科学院', '中国社科院',
+    '供销总社', '供销合作社',
+    '国家烟草', '中国烟草',
+]
 
-# === Heuristic rules ===
+def is_soe_controller(ctrl_name):
+    """Check if controller name indicates SOE ownership."""
+    if not ctrl_name or ctrl_name.strip() == '':
+        return False
+    name = ctrl_name.strip()
+
+    # Check specific keywords first
+    for kw in SOE_CTRL_KEYWORDS:
+        if kw in name:
+            return True
+
+    # Broad rule: controller starts with "中国" + enterprise suffix = SOE
+    # This catches: 中国中信集团, 中国华润, 中国海洋石油集团, 中国稀土集团 etc.
+    if name.startswith('中国') and any(name.endswith(s) for s in [
+        '集团', '集团有限公司', '集团股份公司', '总公司', '有限公司',
+        '公司',
+    ]):
+        # Exclude comma-separated where first controller is non-SOE
+        if ',' in name:
+            parts = [p.strip() for p in name.split(',')]
+            # Check if any part is a SOE indicator
+            for part in parts:
+                if part.startswith('中国') and any(part.endswith(s) for s in
+                    ['集团', '集团有限公司', '总公司', '有限公司']):
+                    return True
+            return False
+        return True
+
+    return False
+
+# === Process ALL stocks ===
 additions = []
 removals = []
+already_soe = set(soe_list)
 
-# First: remove known false positives from SOE list
-for fp_code in ['000009.SZ']:  # 中国宝安
+# First: remove known false positives
+for fp_code in NON_SOE_CODES:
     if fp_code in soe_list:
         soe_list.remove(fp_code)
         removals.append(fp_code)
-        if fp_code in ctrl_data:
-            ctrl_data[fp_code] = ''  # Reset
 
-for code, ctrl in ctrl_data.items():
-    if ctrl and ctrl != '' and code not in removals:
-        continue  # already has good controller data
+# Re-classify ALL stocks using the new rules
+for code in ctrl_data:
+    ctrl = ctrl_data[code]
+
+    # Remove from NON_SOE list
+    if code in NON_SOE_CODES:
+        continue
+
+    # Known SOE extra
+    if code in KNOWN_SOE_EXTRA:
+        if code not in soe_list:
+            soe_list.append(code)
+            additions.append((code, name_map.get(code, ''), 'KNOWN_SOE_EXTRA', '已知国企'))
+        continue
+
+    # Check controller-based classification
+    if ctrl and ctrl.strip() != '':
+        if is_soe_controller(ctrl):
+            if code not in soe_list:
+                soe_list.append(code)
+                additions.append((code, name_map.get(code, ''), ctrl, '央企控制人'))
+        continue  # has controller data, move on
+
+    # Empty controller: apply heuristics
     name = name_map.get(code, '')
     ind_full = ind_all.get(code, '')
-    
-    if code in NON_SOE_CODES:
-        # Ensure it's removed from SOE list
-        if code in soe_list:
-            soe_list.remove(code)
-            removals.append(code)
-        continue
-    
+
     is_soe = False
     reason = ''
-    
-    # RULE 1: All Chinese banks (industry contains 银行)
+
+    # RULE: All Chinese banks
     if '银行' in ind_full and name.endswith('银行'):
         is_soe = True
         reason = '银行(国控)'
-    
-    # RULE 2: All Chinese securities (industry contains 证券)
+    # RULE: All Chinese securities
     elif '证券' in ind_full and name.endswith('证券'):
         is_soe = True
         reason = '证券(国控)'
-    
-    # RULE 3: 中国 prefix + 保险 in name
+    # RULE: 中国 prefix + insurance
     elif '保险' in ind_full and name.startswith('中国'):
         is_soe = True
         reason = '保险(国控)'
-    
-    # RULE 4: Known major SOEs
-    elif code in KNOWN_SOE_EXTRA:
+    # RULE: 中国 prefix + strategic industry
+    elif name.startswith('中国') and any(kw in ind_full for kw in
+        ['铁路', '航空运输', '航天', '军工', '国防', '核', '航天']):
         is_soe = True
-        reason = '已知国企'
-    
-    # RULE 5: "中国" prefix + truly strategic industry  
-    elif name.startswith('中国') and any(kw in ind_full for kw in ['铁路', '航空运输', '航天', '军工', '国防']):
-        is_soe = True
-        reason = f'央企({ind_full[:20]})'
-    
+        reason = f'央企战略({ind_full[:20]})'
+
     if is_soe:
-        ctrl_data[code] = f'{reason}'
-        additions.append((code, name, ind_full[:30], reason))
         if code not in soe_list:
             soe_list.append(code)
+            additions.append((code, name, ind_full[:30], reason))
 
 # Save
 with open(f'{DATA_DIR}/cache/controller_data.json', 'w', encoding='utf-8') as f:
@@ -140,15 +192,14 @@ with open(f'{DATA_DIR}/cache/soe_list.json', 'w', encoding='utf-8') as f:
     json.dump(soe_list, f, ensure_ascii=False, indent=2)
 
 print(f'Added {len(additions)} SOE stocks:')
-for code, name, ind, reason in additions:
-    print(f'  + {code} {name} ({ind}) -> {reason}')
+for code, name, info, reason in additions:
+    print(f'  + {code} {name} [{info}] -> {reason}')
 
 if removals:
     print(f'\nRemoved {len(removals)} false positives:')
     for code in removals:
         print(f'  - {code} {name_map.get(code, "?")}')
 
-prev_soe = len(soe_list) - len(additions) + len(removals)
-print(f'\nTotal SOE: {len(soe_list)} (was {prev_soe})')
-remaining = sum(1 for c in ctrl_data.values() if not c or c == '')
+print(f'\nTotal SOE: {len(soe_list)}')
+remaining = sum(1 for c in ctrl_data.values() if not c or c.strip() == '')
 print(f'Still empty controller: {remaining}')
