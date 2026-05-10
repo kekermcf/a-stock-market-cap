@@ -37,6 +37,13 @@ if os.path.exists(sl_path):
     with open(sl_path, 'r', encoding='utf-8') as f:
         sanction_list = json.load(f)
 
+# Load SOE list
+soe_list = []
+soe_path = f'{DATA_DIR}/cache/soe_list.json'
+if os.path.exists(soe_path):
+    with open(soe_path, 'r', encoding='utf-8') as f:
+        soe_list = json.load(f)
+
 # Build data JSON
 embed_data = []
 for r in results:
@@ -80,6 +87,7 @@ rj = json.dumps(embed_data, ensure_ascii=True)
 aj = json.dumps(ah_status, ensure_ascii=True)
 cj = json.dumps(ah_code_map, ensure_ascii=True)
 sj = json.dumps(sanction_list, ensure_ascii=True)
+soej = json.dumps(soe_list, ensure_ascii=True)
 
 # Industry stats
 industry_stats = {}
@@ -226,8 +234,8 @@ tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3),tbody td:nth-c
 body.mobile .container{{padding:0 12px}}
 body.mobile .header h1{{font-size:20px}}
 body.mobile .header .method{{display:none}}
-body.mobile .controls{{padding:10px 12px;gap:8px}}
-body.mobile .search-box{{min-width:0;font-size:16px}}  /* 16px prevents iOS zoom */
+body.mobile .controls{{padding:10px 12px;gap:8px;flex-wrap:wrap}}
+body.mobile .search-box{{min-width:0;font-size:16px;flex:0 0 100%}}  /* 16px prevents iOS zoom, full width */
 body.mobile select{{font-size:16px;padding:8px 12px}}
 body.mobile .table-wrap{{max-height:none;overflow:visible}}
 body.mobile table{{display:none}}
@@ -338,6 +346,14 @@ body.mobile .sanction-tag.on{{font-size:11px}}
         <option value="rumor">Rumor</option>
         <option value="none">无动作</option>
       </select>
+      <select id="sanctionFilter">
+        <option value="">含制裁</option>
+        <option value="exclude">排除制裁</option>
+      </select>
+      <select id="soeFilter">
+        <option value="">含国企</option>
+        <option value="exclude">排除国企</option>
+      </select>
     </div>
     <div class="pagination" id="pagination"></div>
     <div class="table-wrap">
@@ -401,6 +417,7 @@ var allData = {rj};
 var ahStatus = {aj};  // A+H status: "listed", "announced", or "rumor"
 var ahCodeMap = {cj};  // A-share code -> H-share code
 var defaultSanction = {sj};  // Pre-loaded sanction list
+var defaultSOE = {soej};  // Pre-loaded SOE list
 // 预计算每只股票按市值降序的原始排名
 var mvRank = {{}};
 var sorted = allData.slice().sort(function(a, b) {{ return b.total_mv - a.total_mv; }});
@@ -612,6 +629,8 @@ function filterData() {{
   var ind = document.getElementById('industryFilter').value;
   var mvVal = document.getElementById('mvFilter').value;
   var ahVal = document.getElementById('ahFilter').value;
+  var scVal = document.getElementById('sanctionFilter').value;
+  var soeVal = document.getElementById('soeFilter').value;
 
   // Parse mv filter value (supports ranges like "100-200" and single values)
   var mvMin = 0, mvMax = Infinity;
@@ -623,7 +642,7 @@ function filterData() {{
     mvMin = +mvVal;
   }}
 
-  var isFiltered = !!(q || ind || mvVal !== '0' || ahVal);
+  var isFiltered = !!(q || ind || mvVal !== '0' || ahVal || scVal || soeVal);
 
   // Filter first, then check if current page is out of range
   filtered = allData.filter(function(r) {{
@@ -634,6 +653,8 @@ function filterData() {{
       if (ahVal === 'none') {{ if (s) return false; }}
       else {{ if (s !== ahVal) return false; }}
     }}
+    if (scVal === 'exclude' && isSanctioned(r.ts_code)) return false;
+    if (soeVal === 'exclude' && isSOE(r.ts_code)) return false;
     if (q) {{
       var t = (r.ts_code + r.name + (r.industry || '')).toLowerCase();
       if (t.indexOf(q) === -1) return false;
@@ -692,6 +713,8 @@ document.getElementById('searchInput').addEventListener('input', filterData);
 document.getElementById('industryFilter').addEventListener('change', filterData);
 document.getElementById('mvFilter').addEventListener('change', filterData);
 document.getElementById('ahFilter').addEventListener('change', filterData);
+document.getElementById('sanctionFilter').addEventListener('change', filterData);
+document.getElementById('soeFilter').addEventListener('change', filterData);
 
 // ========== Modal ==========
 function openModal(tsCode) {{
@@ -921,6 +944,10 @@ loadSanctionList();
 
 function isSanctioned(tsCode) {{
   return sanctionList.indexOf(tsCode) >= 0 || defaultSanction.indexOf(tsCode) >= 0;
+}}
+
+function isSOE(tsCode) {{
+  return defaultSOE.indexOf(tsCode) >= 0;
 }}
 
 function toggleSanction(tsCode) {{

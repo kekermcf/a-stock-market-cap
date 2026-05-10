@@ -36,6 +36,13 @@ if os.path.exists(sl_path):
     with open(sl_path, 'r', encoding='utf-8') as f:
         sanction_list = json.load(f)
 
+# Load SOE list
+soe_list = []
+soe_path = f'{DATA_DIR}/cache/soe_list.json'
+if os.path.exists(soe_path):
+    with open(soe_path, 'r', encoding='utf-8') as f:
+        soe_list = json.load(f)
+
 # Load A+H code mapping
 ah_code_map = {}
 ah_map_path = f'{DATA_DIR}/cache/ah_code_map.json'
@@ -77,6 +84,7 @@ rj = json.dumps(embed_data, ensure_ascii=True)
 aj = json.dumps(ah_status, ensure_ascii=True)
 cj = json.dumps(ah_code_map, ensure_ascii=True)
 sj = json.dumps(sanction_list, ensure_ascii=True)
+soej = json.dumps(soe_list, ensure_ascii=True)
 
 html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -205,7 +213,7 @@ body:not(.mobile) .back-top{{display:none}}
 body.mobile .container{{padding:0 12px}}
 body.mobile .header h1{{font-size:20px}}
 body.mobile .controls{{padding:10px 12px;gap:8px}}
-body.mobile .search-box{{min-width:0;font-size:16px}}
+body.mobile .search-box{{min-width:0;font-size:16px;flex:0 0 100%}}
 body.mobile select{{font-size:16px;padding:8px 12px}}
 body.mobile .table-wrap{{max-height:none;overflow:visible}}
 body.mobile table{{display:none}}
@@ -316,6 +324,7 @@ var allData = {rj};
 var ahStatus = {aj};
 var ahCodeMap = {cj};
 var defaultSanction = {sj};
+var defaultSOE = {soej};
 var mvRank = {{}};
 var sorted = allData.slice().sort(function(a, b) {{ return b.total_mv - a.total_mv; }});
 for (var ri = 0; ri < sorted.length; ri++) {{ mvRank[sorted[ri].ts_code] = ri + 1; }}
