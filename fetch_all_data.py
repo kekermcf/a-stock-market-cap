@@ -59,15 +59,12 @@ def parse_ts_code(ts_code):
     return ts_code, ts_code
 
 def tushare_call(api_name, params=None, fields=''):
-    import urllib.request
-    payload = json.dumps({
+    payload = {
         'api_name': api_name, 'token': TUSHARE_TOKEN,
         'params': params or {}, 'fields': fields
-    }).encode('utf-8')
-    req = urllib.request.Request('https://api.tushare.pro', data=payload,
-        headers={'Content-Type': 'application/json'})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read().decode())
+    }
+    r = requests.post('https://api.tushare.pro', json=payload, timeout=30)
+    return r.json()
 
 # ========== Step 1: 市值数据（带缓存） ==========
 def fetch_mv_data(trade_date):
