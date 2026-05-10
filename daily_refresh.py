@@ -9,8 +9,9 @@
 import json, requests, time, concurrent.futures, os, sys, csv, glob
 from datetime import datetime, timedelta
 
-DATA_DIR = 'c:/Users/LG-NB/WorkBuddy/20260425113716'
-CACHE_DIR = f'{DATA_DIR}/cache'
+# DATA_DIR: 项目根目录 = 脚本所在目录（macOS/Linux 兼容）
+DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+CACHE_DIR = os.path.join(DATA_DIR, 'cache')
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 QQ_URL = 'https://web.ifzq.gtimg.cn/appstock/app/fqkline/get'
@@ -18,8 +19,19 @@ QQ_HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebK
 EM_URL = 'https://datacenter.eastmoney.com/securities/api/data/v1/get'
 EM_HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
 
-sys.path.insert(0, r'C:\Users\LG-NB\.workbuddy\plugins\marketplaces\cb_teams_marketplace\plugins\finance-data\skills\neodata-financial-search\scripts')
-from query import query_neodata
+# NeoData plugin path (macOS 路径，Windows 不再需要)
+_neodata_paths = [
+    os.path.expanduser('~/.workbuddy/plugins/marketplaces/cb_teams_marketplace/plugins/finance-data/skills/neodata-financial-search/scripts'),
+]
+for _ndp in _neodata_paths:
+    if os.path.isdir(_ndp):
+        sys.path.insert(0, _ndp)
+        break
+try:
+    from query import query_neodata
+except ImportError:
+    query_neodata = None
+    print('WARNING: query_neodata not available')
 
 def parse_ts_code(ts_code):
     parts = ts_code.split('.')
@@ -422,7 +434,7 @@ def main():
     print(f'  {len(annual_data)} stocks with annual data')
     
     # Step 5: Auto-update AH status (best-effort)
-    print('\n[4/6] Auto-update AH status')
+    print('\n[4/8] Auto-update AH status')
     try:
         # Call update_ah_status_v2.py if exists
         ah_updater = os.path.join(DATA_DIR, 'update_ah_status_v2.py')
@@ -447,7 +459,7 @@ def main():
         print(f'  AH update failed (non-critical): {e}')
 
     # Step 6: Merge all data
-    print('\n[5/6] Merging all data')
+    print('\n[5/8] Merging all data')
     output = []
     for s in stocks:
         ts_code = s['ts_code']
@@ -504,7 +516,7 @@ def main():
         writer.writerows(output)
     
     # Step 6: Generate HTML
-    print('\n[5/6] Generating HTML report')
+    print('\n[5/8] Generating HTML report')
     import subprocess as sp
     r = sp.run([sys.executable, f'{DATA_DIR}/gen_report.py'], capture_output=True, text=True, cwd=DATA_DIR, timeout=300)
     if r.returncode == 0:
@@ -519,15 +531,30 @@ def main():
         print(f'  {r2.stdout.strip()}')
     else:
         print(f'  Watchlist Error: {r2.stderr.strip()[:300]}')
-    
-    # Step 7: Git push to GitHub Pages
-    print('\n[6/6] Pushing to GitHub Pages')
+
+    # Step 7: Fetch & Generate H-share (HK) page
+    print('\n[6/8] Fetching HK stock data...')
+    r3 = sp.run([sys.executable, f'{DATA_DIR}/fetch_hk_data.py'], capture_output=True, text=True, cwd=DATA_DIR, timeout=600)
+    if r3.returncode == 0:
+        print(f'  {r3.stdout.strip()}')
+    else:
+        print(f'  HK fetch Error: {r3.stderr.strip()[:300]}')
+
+    print('\n[7/8] Generating HK report...')
+    r4 = sp.run([sys.executable, f'{DATA_DIR}/gen_hk_report.py'], capture_output=True, text=True, cwd=DATA_DIR, timeout=300)
+    if r4.returncode == 0:
+        print(f'  {r4.stdout.strip()}')
+    else:
+        print(f'  HK report Error: {r4.stderr.strip()[:300]}')
+
+    # Step 8: Git push to GitHub Pages
+    print('\n[8/8] Pushing to GitHub Pages')
     try:
         env = os.environ.copy()
         env['GIT_SSH_COMMAND'] = 'ssh -o StrictHostKeyChecking=accept-new'
         import subprocess as sp2
         # Use full git path since it may not be in PATH on Windows
-        git_exe = os.environ.get('GIT_EXE', r'C:\Program Files\Git\cmd\git.exe')
+        git_exe = os.environ.get('GIT_EXE', 'git')
         cmds = [
             [git_exe, 'add', '-A'],
             [git_exe, 'commit', '-m', f'Auto update: {trade_date}'],

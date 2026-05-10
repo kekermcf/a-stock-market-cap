@@ -24,8 +24,9 @@ A股市值>200亿 完整数据获取脚本 v6
 import json, requests, time, concurrent.futures, os, re, sys, csv
 from datetime import datetime
 
-DATA_DIR = 'c:/Users/LG-NB/WorkBuddy/20260425113716'
-CACHE_DIR = f'{DATA_DIR}/cache'
+# DATA_DIR: 项目根目录 = 脚本所在目录（macOS/Linux 兼容）
+DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+CACHE_DIR = os.path.join(DATA_DIR, 'cache')
 os.makedirs(CACHE_DIR, exist_ok=True)
 
 TUSHARE_TOKEN = '0ea302669814ada44d52d64f5fb924b5f4ffd50215924322229eb54b'
@@ -34,9 +35,21 @@ QQ_HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebK
 EM_URL = 'https://datacenter.eastmoney.com/securities/api/data/v1/get'
 EM_HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
 
-# ========== NeoData ==========
-sys.path.insert(0, r'C:\Users\LG-NB\.workbuddy\plugins\marketplaces\cb_teams_marketplace\plugins\finance-data\skills\neodata-financial-search\scripts')
-from query import query_neodata
+# ========== NeoData (macOS 路径) ==========
+_neodata_paths = [
+    os.path.expanduser('~/.workbuddy/plugins/marketplaces/cb_teams_marketplace/plugins/finance-data/skills/neodata-financial-search/scripts'),
+]
+_neodata_found = False
+for _ndp in _neodata_paths:
+    if os.path.isdir(_ndp):
+        sys.path.insert(0, _ndp)
+        _neodata_found = True
+        break
+if _neodata_found:
+    from query import query_neodata
+else:
+    query_neodata = None
+    print('WARNING: query_neodata not available')
 
 # ========== Utility ==========
 def parse_ts_code(ts_code):

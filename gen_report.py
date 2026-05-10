@@ -1,6 +1,7 @@
 import json, os
 
-DATA_DIR = 'c:/Users/LG-NB/WorkBuddy/20260425113716'
+# DATA_DIR: 项目根目录 = 脚本所在目录（macOS/Linux 兼容）
+DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # 自动检测最新交易日：从缓存文件名推断，或用今天/上个交易日
 import glob
@@ -357,6 +358,12 @@ body.mobile .sanction-tag.on{{font-size:11px}}
 <div class="header">
   <div style="display:flex;justify-content:space-between;align-items:flex-start">
     <div>
+      <nav style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <a href="index.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">🏠 首页</a>
+        <a href="ashare.html" style="color:#fff;text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(79,70,229,.5);font-weight:600">🇨🇳 A股</a>
+        <a href="hongkong.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">🇭🇰 H股</a>
+        <a href="watchlist.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">⭐ 自选</a>
+      </nav>
       <h1>A股市值超100亿股票名单</h1>
       <div class="date">数据截止：{date_display}（收盘）</div>
       <div class="method">市值：腾讯财经API x Tushare总股本 · 行业：NeoData二级行业 · 财务：东方财富（2025年报） · 点击行查看详情</div>
@@ -365,7 +372,7 @@ body.mobile .sanction-tag.on{{font-size:11px}}
       <span id="viewIcon">📱</span>
       <span id="viewLabel">手机版</span>
     </button>
-    <a class="watch-btn" href="watchlist.html" title="keke自选股">⭐ 自选</a>
+    </div>
   </div>
 </div>
 
@@ -1065,8 +1072,8 @@ with open(output_path, 'wb') as f:
     f.write(b'\xef\xbb\xbf')
     f.write(html.encode('utf-8'))
 
-# Also save as index.html for GitHub Pages (fixed URL)
-index_path = f'{DATA_DIR}/index.html'
+# Also save as ashare.html for GitHub Pages
+index_path = f'{DATA_DIR}/ashare.html'
 with open(index_path, 'wb') as f:
     f.write(b'\xef\xbb\xbf')
     f.write(html.encode('utf-8'))

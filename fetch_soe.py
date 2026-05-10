@@ -4,7 +4,8 @@ then classify as SOE based on controller name keywords."""
 import json, time, os, sys
 import requests
 
-DATA_DIR = 'c:/Users/LG-NB/WorkBuddy/20260425113716'
+# DATA_DIR: 项目根目录 = 脚本所在目录（macOS/Linux 兼容）
+DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Load stock codes (>=100B only)
 with open(f'{DATA_DIR}/stock_data_full.json', 'r', encoding='utf-8') as f:

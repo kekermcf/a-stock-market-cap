@@ -1,8 +1,9 @@
 """Fix SOE list v4: add all国有资产 keyword variants (监督管理局/管理中心/运营中心/经营)."""
 
-import json
+import json, os
 
-DATA_DIR = 'c:/Users/LG-NB/WorkBuddy/20260425113716'
+# DATA_DIR: 项目根目录 = 脚本所在目录（macOS/Linux 兼容）
+DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 
 with open(f'{DATA_DIR}/cache/controller_data.json', 'r', encoding='utf-8') as f:
     ctrl_data = json.load(f)

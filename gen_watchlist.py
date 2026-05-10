@@ -1,7 +1,8 @@
 """Generate watchlist.html - keke's personal watchlist page"""
 import json, os, glob
 
-DATA_DIR = 'c:/Users/LG-NB/WorkBuddy/20260425113716'
+# DATA_DIR: 项目根目录 = 脚本所在目录（macOS/Linux 兼容）
+DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Auto-detect trade date
 mv_files = sorted(glob.glob(f'{DATA_DIR}/cache/mv_data_*.json'))
@@ -137,6 +138,8 @@ body{{font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-
 .header .date{{font-size:14px;opacity:.8}}
 .back-link{{display:inline-block;margin-top:12px;color:#fff;text-decoration:none;font-size:14px;opacity:.9;border:1px solid rgba(255,255,255,.4);padding:6px 16px;border-radius:8px;transition:background .2s}}
 .back-link:hover{{background:rgba(255,255,255,.2)}}
+.view-toggle{{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;white-space:nowrap;transition:background .2s;display:flex;align-items:center;gap:6px}}
+.view-toggle:hover{{background:rgba(255,255,255,.25)}}
 .container{{max-width:1500px;margin:0 auto 40px;padding:0 24px}}
 /* Password overlay */
 .pwd-overlay{{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:2000;display:flex;justify-content:center;align-items:center}}
@@ -299,9 +302,22 @@ body.mobile .modal-close{{width:44px;height:44px;font-size:22px}}
 <!-- Main content (hidden until pwd ok) -->
 <div class="main-content" id="mainContent">
   <div class="header">
-    <h1>⭐ keke自选股</h1>
-    <div class="date">数据截止：{date_display}（收盘）</div>
-    <a class="back-link" href="index.html">← 返回主页</a>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <nav style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <a href="index.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">🏠 首页</a>
+          <a href="ashare.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">🇨🇳 A股</a>
+          <a href="hongkong.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">🇭🇰 H股</a>
+          <a href="watchlist.html" style="color:#fff;text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(234,88,12,.5);font-weight:600">⭐ 自选</a>
+        </nav>
+        <h1>⭐ keke自选股</h1>
+        <div class="date">数据截止：{date_display}（收盘）</div>
+      </div>
+      <button id="viewToggle" class="view-toggle" onclick="toggleView()" title="切换手机版/桌面版">
+        <span id="viewIcon">📱</span>
+        <span id="viewLabel">手机版</span>
+      </button>
+    </div>
   </div>
 
   <div class="container">
@@ -401,7 +417,21 @@ document.getElementById('pwdInput').addEventListener('keydown', function(e) {{
   if (window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {{
     document.body.classList.add('mobile');
   }}
+  var isMb = document.body.classList.contains('mobile');
+  var icon = document.getElementById('viewIcon');
+  var label = document.getElementById('viewLabel');
+  if (icon) icon.textContent = isMb ? '💻' : '📱';
+  if (label) label.textContent = isMb ? '桌面版' : '手机版';
 }})();
+
+// View toggle function
+function toggleView() {{
+  var body = document.body;
+  var isMobile = body.classList.toggle('mobile');
+  document.getElementById('viewIcon').textContent = isMobile ? '💻' : '📱';
+  document.getElementById('viewLabel').textContent = isMobile ? '桌面版' : '手机版';
+  renderWatchlist();
+}}
 
 // Focus pwd input
 setTimeout(function() {{ document.getElementById('pwdInput').focus(); }}, 200);
