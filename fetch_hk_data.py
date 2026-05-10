@@ -34,7 +34,8 @@ MV_THRESHOLD = 250
 # 腾讯 quote 字段映射（v_hkXXXXX="..."）
 # 索引: 0=type, 1=名称, 2=代码, 3=最新价, 4=昨收, 5=开盘, 6=成交量,
 #       31=涨跌额, 32=涨跌幅%, 33=最高, 34=最低, 35=收盘, 37=成交额,
-#       39=PE, 43=PB, 44=总市值(亿港币), 47=每股净资产?, 48=52周高, 49=52周低, 51=股息率%
+#       39=PE, 43=PB, 44=H股市值(亿港币), 45=总市值(亿港币),
+#       47=每股净资产?, 48=52周高, 49=52周低, 51=股息率%
 QQ_F_NAME = 1
 QQ_F_CODE = 2
 QQ_F_PRICE = 3
@@ -44,7 +45,8 @@ QQ_F_HIGH = 33
 QQ_F_LOW = 34
 QQ_F_PE = 39
 QQ_F_PB = 43
-QQ_F_MV = 44
+QQ_F_MV_H = 44    # H股流通市值
+QQ_F_MV_TOTAL = 45  # 总市值（含A+H全部股份）
 
 
 def _num(v, default=0):
@@ -109,7 +111,13 @@ def fetch_qq_batch(codes):
 
                 code = str(data[QQ_F_CODE]).strip().zfill(5)
                 name = data[QQ_F_NAME]
-                total_mv = _num(data[QQ_F_MV])
+                # Use max(H股市值, 总市值) for total market cap
+                mv_h = _num(data[QQ_F_MV_H])
+                mv_total = _num(data[QQ_F_MV_TOTAL])
+                total_mv = max(mv_h, mv_total)
+                # Skip 5-digit codes starting with 8 (RMB counter: -R/-WR)
+                if len(code) == 5 and code.startswith('8'):
+                    continue
                 close = _num(data[QQ_F_PRICE])
                 pct_chg = _num(data[QQ_F_PCTCHG])
                 pe = data[QQ_F_PE] if data[QQ_F_PE] else ''
@@ -274,6 +282,101 @@ def calc_ytd_for_stocks(stocks, trade_date):
     return results
 
 
+def load_ah_status():
+    """从 ah_status.json 加载 A+H 双上市状态，并构建 HK代码→状态 的映射"""
+    ah_path = os.path.join(CACHE_DIR, 'ah_status.json')
+    ah_status_a = {}
+    if os.path.exists(ah_path):
+        with open(ah_path, 'r', encoding='utf-8') as f:
+            ah_status_a = json.load(f)
+
+    # 从 ashare.html 提取 A股ts_code 和 ahStatus
+    ashare_path = os.path.join(DATA_DIR, 'ashare.html')
+    ah_status_from_html = {}
+    if os.path.exists(ashare_path):
+        with open(ashare_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        import re
+        m = re.search(r'var ahStatus = (\{[^;]+\});', content)
+        if m:
+            ah_status_from_html = json.loads(m.group(1))
+
+    if ah_status_from_html:
+        ah_status_a = ah_status_from_html
+
+    # Build A股代码 → HK代码 mapping using Tencent API
+    # A股代码格式: 000001.SZ, 600036.SH
+    # HK代码格式: 00700, 02318
+    # We can query Tencent with the HK code to get the name,
+    # then match with A-share names to find the mapping
+    # But for efficiency, let's build a reverse mapping from known A+H stocks
+
+    # Common A+H code mapping (A-share ts_code → HK code)
+    # This is a well-known list - we'll try to match by querying names
+    a_to_hk = {}
+    a_codes = [k for k, v in ah_status_a.items() if v in ('listed', 'announced')]
+
+    if a_codes:
+        print(f'  Building A→HK mapping for {len(a_codes)} stocks...')
+    # Query HK stocks by name matching
+    # First, get A-stock names from ashare.html data
+    a_names = {}
+    if os.path.exists(ashare_path):
+        with open(ashare_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        # Parse the JSON array properly (names are \uXXXX encoded)
+        a_data_start = content.find('var allData = [')
+        if a_data_start >= 0:
+            a_data_start += len('var allData = ')
+            depth = 0
+            for ci in range(a_data_start, len(content)):
+                if content[ci] == '[': depth += 1
+                elif content[ci] == ']': depth -= 1
+                if depth == 0:
+                    a_data = json.loads(content[a_data_start:ci+1])
+                    a_names = {s['ts_code']: s['name'] for s in a_data}
+                    break
+
+        # Query Tencent batch for all HK stocks to get HK code → name mapping
+        try:
+            # Get the full HK stock list
+            import akshare as ak
+            df = ak.stock_hk_spot()
+            if df is not None and not df.empty:
+                # Build HK name → code map
+                hk_name_map = {}
+                for _, row in df.iterrows():
+                    hk_code = str(row.get('代码', '')).strip().zfill(5)
+                    hk_name = str(row.get('中文名称', '')).strip()
+                    if hk_code and hk_name:
+                        hk_name_map[hk_name] = hk_code
+                # Match A-stock name with HK name (exact or with suffix stripped)
+                for ts_code in a_codes:
+                    a_name = a_names.get(ts_code, '')
+                    if not a_name:
+                        continue
+                    # Try exact match first
+                    if a_name in hk_name_map and ts_code not in a_to_hk:
+                        a_to_hk[ts_code] = hk_name_map[a_name]
+                    else:
+                        # Try stripping common suffixes
+                        base_name = a_name.rstrip('-WH').rstrip('-W').rstrip('-R')
+                        if base_name in hk_name_map and ts_code not in a_to_hk:
+                            a_to_hk[ts_code] = hk_name_map[base_name]
+        except Exception as e:
+            print(f'  Warning: Could not build name mapping: {e}')
+
+    # Build HK代码 → A+H状态
+    hk_to_ah = {}
+    for ts_code, status in ah_status_a.items():
+        hk_code = a_to_hk.get(ts_code)
+        if hk_code:
+            hk_to_ah[hk_code] = status
+
+    print(f'  A→HK mapping: {len(a_to_hk)} stocks, HK→AH status: {len(hk_to_ah)} entries')
+    return hk_to_ah
+
+
 def main():
     print('=' * 60)
     print('港股数据获取 — 市值 >= 250 亿港币')
@@ -321,6 +424,17 @@ def main():
         print('Failed to fetch data from all sources. Exiting.')
         return
 
+    # 加载 A+H 双上市状态
+    print('\n[AH] Loading A+H dual-listing status...')
+    hk_ah_status = load_ah_status()
+    for s in stocks:
+        s['ah_status'] = hk_ah_status.get(s['code'], '')
+    ah_listed = sum(1 for s in stocks if s['ah_status'] == 'listed')
+    ah_announced = sum(1 for s in stocks if s['ah_status'] == 'announced')
+    print(f'  A+H listed: {ah_listed}, announced: {ah_announced}')
+
+    # 过滤 -T 股票和已由8开头过滤的
+    stocks = [s for s in stocks if not s['name'].endswith('-T')]
     print(f'\n[2/3] Parsing and filtering...')
     print(f'  {len(stocks)} stocks with MV >= {MV_THRESHOLD}B HKD')
 

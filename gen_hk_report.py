@@ -104,7 +104,17 @@ tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3),tbody td:nth-c
 .ind-bar{{height:8px;background:#ccfbf1;border-radius:4px;overflow:hidden}}
 .ind-bar-fill{{height:100%;background:linear-gradient(90deg,#0d9488,#2dd4bf);border-radius:4px;transition:width .3s}}
 .ind-count{{color:#888;font-size:13px;min-width:50px;text-align:right}}
-.ind-mv{{font-weight:600;color:#c0392b;min-width:100px;text-align:right;font-size:13px}}
+tbody tr.ah-listed{{background:#e8f4fd}}
+tbody tr.ah-listed:hover{{background:#d6eaf8}}
+tbody tr.ah-announced{{background:#fef9e7}}
+tbody tr.ah-announced:hover{{background:#fdf2d1}}
+.ah-tag{{display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:600;margin-left:4px}}
+.ah-tag.listed{{background:#b3d9f2;color:#1a5276}}
+.ah-tag.announced{{background:#f9e79f;color:#7d6608}}
+.ah-tag.rumor{{background:#e8daef;color:#6c3483}}
+.ah-filter{{margin-left:4px}}
+.mobile-card.ah-listed{{background:#e8f4fd}}
+.mobile-card.ah-announced{{background:#fef9e7}}
 .pagination{{padding:8px 20px 14px;display:flex;justify-content:flex-start;align-items:flex-start;gap:6px;flex-wrap:wrap;border-bottom:1px solid #eee;margin-bottom:2px}}
 .page-btn{{padding:6px 14px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:13px}}
 .page-btn:hover{{background:#f0f0f0}}
@@ -217,6 +227,11 @@ body.mobile .back-top{{display:block}}
     <div class="controls">
       <input type="text" class="search-box" id="searchInput" placeholder="搜索股票代码/名称/行业...">
       <select id="industryFilter"><option value="">全部行业</option>{ind_options}</select>
+      <select id="ahFilter">
+        <option value="">全部</option>
+        <option value="listed">A+H双上市</option>
+        <option value="announced">拟H股</option>
+      </select>
       <select id="mvFilter">
         <option value="0">全部市值</option>
         <option value="250">250亿以上</option>
@@ -284,8 +299,12 @@ window.onerror = function(msg, url, line) {{
   return false;
 }};
 
-var allData = {rj};
-var PAGE_SIZE = 60;
+var allData_raw = {rj};
+var allData = allData_raw.filter(function(s) {{ return !s.name.endsWith('-T'); }});
+var sorted = allData.slice().sort(function(a, b) {{ return b.total_mv - a.total_mv; }});
+var mvRank = {{}};
+for (var ri = 0; ri < sorted.length; ri++) {{ mvRank[sorted[ri].code] = ri + 1; }}
+for (var ai = 0; ai < allData.length; ai++) {{ allData[ai]._rank = mvRank[allData[ai].code]; }}
 var filtered = allData.slice();
 var curPage = 1;
 var sortKey = 'total_mv';
@@ -318,15 +337,18 @@ function render() {{
   var rows = [];
   for (var i = 0; i < pd.length; i++) {{
     var r = pd[i];
+    var ah = r.ah_status || '';
+    var ahClass = ah === 'listed' ? ' ah-listed' : ah === 'announced' ? ' ah-announced' : ah === 'rumor' ? ' ah-rumor' : '';
+    var ahTag = ah === 'listed' ? ' <span class="ah-tag listed">A+H</span>' : ah === 'announced' ? ' <span class="ah-tag announced">拟H股</span>' : ah === 'rumor' ? ' <span class="ah-tag rumor">Rumor</span>' : '';
     var revHtml = r.revenue != null ? numfmt(r.revenue, 1) : '<span class="pending">暂无</span>';
     var gprHtml = r.gpr != null ? Math.round(r.gpr) + '%' : '<span class="pending">-</span>';
     var npHtml = r.net_profit != null ? numfmt(r.net_profit, 0) : '<span class="pending">暂无</span>';
     var npmHtml = r.npm != null ? Math.round(r.npm) + '%' : '<span class="pending">-</span>';
     var npCls = r.net_profit != null ? (r.net_profit >= 0 ? 'fin-pos' : 'fin-neg') : '';
-    rows.push('<tr data-code="' + r.code + '">' +
-      '<td>' + (i + s + 1) + '</td>' +
+    rows.push('<tr data-code="' + r.code + '" class="' + ahClass.trim() + '">' +
+      '<td>' + r._rank + '</td>' +
       '<td class="code">' + r.code + '.HK</td>' +
-      '<td><b>' + r.name + '</b></td>' +
+      '<td><b>' + r.name + '</b>' + ahTag + '</td>' +
       '<td>' + (r.industry || '-') + '</td>' +
       '<td class="mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '</td>' +
       '<td>' + ytdHtml(r.ytd_2024) + '</td>' +
@@ -350,13 +372,16 @@ function renderMobileList(pd) {{
   var cards = [];
   for (var i = 0; i < pd.length; i++) {{
     var r = pd[i];
+    var ah = r.ah_status || '';
+    var ahClass = ah === 'listed' ? ' ah-listed' : ah === 'announced' ? ' ah-announced' : ah === 'rumor' ? ' ah-rumor' : '';
+    var ahTag = ah === 'listed' ? ' <span class="ah-tag listed">A+H</span>' : ah === 'announced' ? ' <span class="ah-tag announced">拟H股</span>' : ah === 'rumor' ? ' <span class="ah-tag rumor">Rumor</span>' : '';
     var ytd24 = r.ytd_2024 != null ? ytdHtml(r.ytd_2024) : '<span class="pending">-</span>';
     var ytd25 = r.ytd_2025 != null ? ytdHtml(r.ytd_2025) : '<span class="pending">-</span>';
     var ytd26 = r.ytd_2026 != null ? ytdHtml(r.ytd_2026) : '<span class="pending">-</span>';
     cards.push(
-      '<div class="mobile-card" data-code="' + r.code + '">' +
+      '<div class="mobile-card' + ahClass + '" data-code="' + r.code + '">' +
         '<div class="mc-top">' +
-          '<div class="mc-name">' + (i+1) + '. ' + r.name + '</div>' +
+          '<div class="mc-name">' + r._rank + '. ' + r.name + ahTag + '</div>' +
           '<div class="mc-mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '亿</div>' +
         '</div>' +
         '<div class="mc-info">' +
@@ -463,6 +488,7 @@ function go(p) {{
 function filterData() {{
   var q = document.getElementById('searchInput').value.toLowerCase();
   var ind = document.getElementById('industryFilter').value;
+  var ahVal = document.getElementById('ahFilter').value;
   var mvVal = document.getElementById('mvFilter').value;
   var mvMin = 0, mvMax = Infinity;
   if (mvVal.indexOf('-') > 0) {{
@@ -472,6 +498,7 @@ function filterData() {{
   filtered = allData.filter(function(r) {{
     if (r.total_mv < mvMin || r.total_mv >= mvMax) return false;
     if (ind && r.industry !== ind) return false;
+    if (ahVal && (r.ah_status || '') !== ahVal) return false;
     if (q) {{
       var t = (r.code + r.name + (r.industry || '')).toLowerCase();
       if (t.indexOf(q) === -1) return false;
@@ -508,6 +535,7 @@ document.querySelectorAll('thead th[data-sort]').forEach(function(th) {{
 
 document.getElementById('searchInput').addEventListener('input', filterData);
 document.getElementById('industryFilter').addEventListener('change', filterData);
+document.getElementById('ahFilter').addEventListener('change', filterData);
 document.getElementById('mvFilter').addEventListener('change', filterData);
 document.getElementById('stockTableBody').addEventListener('click', function(e) {{
   var tr = e.target.closest('tr');
