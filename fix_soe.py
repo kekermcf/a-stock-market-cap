@@ -1,7 +1,4 @@
-"""Fix SOE list v3: comprehensive re-check of ALL stocks (not just empty ones).
-- Broader keyword matching for controller names
-- Properly handle 中国xxx集团/公司 pattern
-- Add state-backed companies with complex ownership (SMIC etc.)"""
+"""Fix SOE list v4: add all国有资产 keyword variants (监督管理局/管理中心/运营中心/经营)."""
 
 import json
 
@@ -55,6 +52,7 @@ NON_SOE_CODES = {
     '688820.SH',  # C盛合
     '601138.SH',  # 工业富联 (Foxconn)
     '600007.SH',  # 中国国贸 (Kerry Properties, not SOE)
+    '605389.SH',  # 混合持有 (个人+国资)，不算纯国企
 }
 
 # === Additional known SOEs (API has no data or no matching keywords) ===
@@ -73,21 +71,38 @@ KNOWN_SOE_EXTRA = {
     '688981.SH',  # 中芯国际 (SMIC - 大基金/国资背景)
     '688041.SH',  # 海光信息 (中科院背景)
     '688256.SH',  # 寒武纪 (中科院背景)
+    # County-level 财政局 = local SOE
+    '601899.SH',  # 紫金矿业 (上杭县财政局)
 }
 
 # === Broad SOE keyword matching ===
 SOE_CTRL_KEYWORDS = [
-    '国资委', '国有资产监督管理委员会', '国有资产管理局',
-    '财政部', '中华人民共和国财政部',
+    # 国有资产 all variants
+    '国有资产监督管理委员会', '国有资产监督管理办公室',
+    '国有资产监督管理局', '国有资产管理局',
+    '国有资产管理中心', '国有资产运营中心', '国有资产经营',
+    '国有资产投资', '国有资产管理委员会',
+    '国有资产',  # catch-all for any remaining variants
+    '国资委',
+    # Government fiscal/finance
+    '财政部', '中华人民共和国财政部', '财政局',
+    # Government bodies
     '人民政府', '省政府', '市政府', '县政府', '区政府', '自治区',
     '中国投资有限责任公司', '中央汇金', '汇金投资',
     '国务院', '中共中央',
+    # Social security
     '全国社会保障基金', '社保基金',
+    # State capital variants
     '国有资本', '国资运营', '国资经营', '国资管理', '国资控股',
     '国有控股', '国有独资',
+    # Academies
     '中国科学院', '中国社科院',
+    # Cooperatives
     '供销总社', '供销合作社',
+    # Tobacco
     '国家烟草', '中国烟草',
+    # Production corps
+    '新疆生产建设兵团',
 ]
 
 def is_soe_controller(ctrl_name):
