@@ -11,8 +11,6 @@ body{font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-s
 .header{background:linear-gradient(135deg,#f39c12 0%,#e67e22 100%);color:#fff;padding:32px 24px;text-align:center}
 .header h1{font-size:28px;margin-bottom:8px}
 .header .date{font-size:14px;opacity:.8}
-.back-link{display:inline-block;margin-top:12px;color:#fff;text-decoration:none;font-size:14px;opacity:.9;border:1px solid rgba(255,255,255,.4);padding:6px 16px;border-radius:8px;transition:background .2s}
-.back-link:hover{background:rgba(255,255,255,.2)}
 .container{max-width:1500px;margin:0 auto 40px;padding:0 24px}
 /* Password overlay */
 .pwd-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:2000;display:flex;justify-content:center;align-items:center}
@@ -175,9 +173,18 @@ body.mobile .modal-close{width:44px;height:44px;font-size:22px}
 <!-- Main content (hidden until pwd ok) -->
 <div class="main-content" id="mainContent">
   <div class="header">
-    <h1>⭐ keke自选股</h1>
-    <div class="date">数据截止：2026年5月8日（收盘）</div>
-    <a class="back-link" href="index.html">← 返回主页</a>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <nav style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+          <a href="index.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">🏠 首页</a>
+          <a href="ashare.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">🇨🇳 A股</a>
+          <a href="hongkong.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">🇭🇰 H股</a>
+          <a href="watchlist.html" style="color:#fff;text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(234,88,12,.5);font-weight:600">⭐ 自选</a>
+        </nav>
+        <h1>⭐ keke自选股</h1>
+        <div class="date">数据截止：2026年5月8日（收盘）</div>
+      </div>
+    </div>
   </div>
 
   <div class="container">
