@@ -518,34 +518,34 @@ def main():
     # Step 6: Generate HTML
     print('\n[5/8] Generating HTML report')
     import subprocess as sp
-    r = sp.run([sys.executable, f'{DATA_DIR}/gen_report.py'], capture_output=True, text=True, cwd=DATA_DIR, timeout=300)
+    r = sp.run([sys.executable, f'{DATA_DIR}/gen_report.py'], capture_output=True, text=True, encoding='utf-8', errors='replace', cwd=DATA_DIR, timeout=300)
     if r.returncode == 0:
-        print(f'  {r.stdout.strip()}')
+        print(f'  {(r.stdout or "").strip()}')
     else:
-        print(f'  Error: {r.stderr.strip()[:300]}')
+        print(f'  Error: {(r.stderr or "")[:300]}')
 
     # Generate watchlist page
     print('  Generating watchlist page...')
-    r2 = sp.run([sys.executable, f'{DATA_DIR}/gen_watchlist.py'], capture_output=True, text=True, cwd=DATA_DIR, timeout=300)
+    r2 = sp.run([sys.executable, f'{DATA_DIR}/gen_watchlist.py'], capture_output=True, text=True, encoding='utf-8', errors='replace', cwd=DATA_DIR, timeout=300)
     if r2.returncode == 0:
-        print(f'  {r2.stdout.strip()}')
+        print(f'  {(r2.stdout or "").strip()}')
     else:
-        print(f'  Watchlist Error: {r2.stderr.strip()[:300]}')
+        print(f'  Watchlist Error: {(r2.stderr or "")[:300]}')
 
     # Step 7: Fetch & Generate H-share (HK) page
     print('\n[6/8] Fetching HK stock data...')
-    r3 = sp.run([sys.executable, f'{DATA_DIR}/fetch_hk_data.py'], capture_output=True, text=True, cwd=DATA_DIR, timeout=600)
+    r3 = sp.run([sys.executable, f'{DATA_DIR}/fetch_hk_data.py'], capture_output=True, text=True, encoding='utf-8', errors='replace', cwd=DATA_DIR, timeout=600)
     if r3.returncode == 0:
-        print(f'  {r3.stdout.strip()}')
+        print(f'  {(r3.stdout or "").strip()}')
     else:
-        print(f'  HK fetch Error: {r3.stderr.strip()[:300]}')
+        print(f'  HK fetch Error: {(r3.stderr or "")[:300]}')
 
     print('\n[7/8] Generating HK report...')
-    r4 = sp.run([sys.executable, f'{DATA_DIR}/gen_hk_report.py'], capture_output=True, text=True, cwd=DATA_DIR, timeout=300)
+    r4 = sp.run([sys.executable, f'{DATA_DIR}/gen_hk_report.py'], capture_output=True, text=True, encoding='utf-8', errors='replace', cwd=DATA_DIR, timeout=300)
     if r4.returncode == 0:
-        print(f'  {r4.stdout.strip()}')
+        print(f'  {(r4.stdout or "").strip()}')
     else:
-        print(f'  HK report Error: {r4.stderr.strip()[:300]}')
+        print(f'  HK report Error: {(r4.stderr or "")[:300]}')
 
     # Step 8: Git push to GitHub Pages
     print('\n[8/8] Pushing to GitHub Pages')
@@ -561,10 +561,12 @@ def main():
             [git_exe, 'push', 'origin', 'main'],
         ]
         for cmd in cmds:
-            result = sp2.run(cmd, capture_output=True, text=True, cwd=DATA_DIR, env=env, timeout=60)
-            if result.returncode != 0 and 'nothing to commit' not in result.stdout and 'nothing to commit' not in result.stderr:
-                if 'no changes added' not in result.stdout and 'no changes added' not in result.stderr:
-                    print(f'  Warning: {" ".join(cmd)}: {result.stderr.strip()[:200]}')
+            result = sp2.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace', cwd=DATA_DIR, env=env, timeout=60)
+            stdout_s = result.stdout or ''
+            stderr_s = result.stderr or ''
+            if result.returncode != 0 and 'nothing to commit' not in stdout_s and 'nothing to commit' not in stderr_s:
+                if 'no changes added' not in stdout_s and 'no changes added' not in stderr_s:
+                    print(f'  Warning: {" ".join(cmd)}: {stderr_s[:200]}')
             else:
                 if 'commit' in cmd[1]:
                     print(f'  Committed: {trade_date}')
