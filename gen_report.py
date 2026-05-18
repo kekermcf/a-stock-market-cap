@@ -144,6 +144,15 @@ if os.path.exists(ah_hk_dates_path):
 for d in embed_data:
     d['hk_list_date'] = ah_hk_dates.get(d['ts_code'], '')
 
+# Load A+H premium data
+ah_premia = {}
+ah_premia_path = f'{DATA_DIR}/cache/ah_premia.json'
+if os.path.exists(ah_premia_path):
+    with open(ah_premia_path, 'r', encoding='utf-8') as f:
+        ah_premia = json.load(f)
+for d in embed_data:
+    d['ah_premium'] = ah_premia.get(d['ts_code'], None)
+
 rj = json.dumps(embed_data, ensure_ascii=True)
 aj = json.dumps(ah_status, ensure_ascii=True)
 cj = json.dumps(ah_code_map, ensure_ascii=True)
@@ -218,6 +227,9 @@ tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3),tbody td:nth-c
 .code{{font-family:'SF Mono','Consolas',monospace;font-size:13px;color:#666}}
 .hk-code{{font-family:'SF Mono','Consolas',monospace;font-size:11px;color:#f39c12;line-height:1.2}}
 .hk-ld{{font-size:10px;color:#999;margin-left:4px;font-weight:400;white-space:nowrap}}
+.ah-prem{{font-size:10px;margin-left:4px;font-weight:600;white-space:nowrap}}
+.ah-prem.pos{{color:#e74c3c}}
+.ah-prem.neg{{color:#27ae60}}
 .mv{{font-weight:600;color:#c0392b}}
 .chg-up{{color:#c0392b;font-weight:500}}
 .chg-dn{{color:#27ae60;font-weight:500}}
@@ -540,7 +552,7 @@ function render() {{
     rows.push('<tr data-code="' + r.ts_code + '" class="' + ahClass.trim() + '">' +
       '<td>' + rk + '</td>' +
       '<td class="code">' + r.ts_code + (r.hk_code ? '<br><span class="hk-code">' + r.hk_code + '.HK</span>' : '') + '</td>' +
-      '<td><b>' + r.name + '</b>' + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag off" data-code="' + r.ts_code + '">\u26d4</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + '</td>' +
+      '<td><b>' + r.name + '</b>' + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag off" data-code="' + r.ts_code + '">\u26d4</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</td>' +
       '<td>' + (r.industry || '-') + '</td>' +
       '<td class="mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '</td>' +
       '<td>' + ytdHtml(r.ytd_2024) + '</td>' +
@@ -577,7 +589,7 @@ function renderMobileList(pd) {{
     cards.push(
       '<div class="mobile-card' + ahClass + '" data-code="' + r.ts_code + '">' +
         '<div class="mc-top">' +
-          '<div class="mc-name" style="display:flex;align-items:center;gap:4px">' + r._rank + '. ' + r.name + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag off" data-code="' + r.ts_code + '">\u26d4</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + '</div>' +
+          '<div class="mc-name" style="display:flex;align-items:center;gap:4px">' + r._rank + '. ' + r.name + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag off" data-code="' + r.ts_code + '">\u26d4</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</div>' +
           '<div class="mc-mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '亿</div>' +
         '</div>' +
         '<div class="mc-info">' +
@@ -825,6 +837,9 @@ function openModal(tsCode) {{
   var subText = stock.industry;
   if (stock.industry_l1 && stock.industry_l1 !== stock.industry) {{
     subText += '  |  ' + stock.industry_l1;
+  }}
+  if (stock.ah_premium != null) {{
+    subText += '  |  AH\u6ea2\u4ef7 ' + (stock.ah_premium >= 0 ? '+' : '') + stock.ah_premium + '%';
   }}
   document.getElementById('modalSub').textContent = subText;
   var peStr = stock.pe ? stock.pe : '-';
