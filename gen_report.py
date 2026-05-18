@@ -302,7 +302,8 @@ tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3),tbody td:nth-c
 .ytd-card{{text-align:center;padding:12px;border-radius:10px;background:#f8f9fa}}
 .ytd-card .year{{font-size:13px;color:#888;margin-bottom:4px}}
 .ytd-card .val{{font-size:22px;font-weight:700}}
-.data-source{{font-size:11px;color:#aaa;text-align:center;margin-top:8px}}
+.data-source{{font-size:11px;color:#aaa;text-align:center;margin-top:8px;display:none}}
+body.mobile .data-source{{display:block}}
 .view-toggle{{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;white-space:nowrap;transition:background .2s;display:flex;align-items:center;gap:6px}}
 .view-toggle:hover{{background:rgba(255,255,255,.25)}}
 /* ===== Mobile View ===== */
@@ -379,23 +380,22 @@ body.mobile .sanction-tag.on{{font-size:11px}}
 <div id="jsError" style="display:none;position:fixed;top:0;left:0;width:100%;padding:12px;background:#fee;color:#c00;z-index:9999;font-size:14px"></div>
 
 <div class="header">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+  <div style="position:relative">
     <div>
-      <nav style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-        <a href="index.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">🏠 首页</a>
+      <nav style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;justify-content:center">
         <a href="ashare.html" style="color:#fff;text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(79,70,229,.5);font-weight:600">🇨🇳 A股</a>
         <a href="hongkong.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">🇭🇰 H股</a>
         <a href="watchlist.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">⭐ 自选</a>
       </nav>
-      <h1>A股市值超100亿股票名单</h1>
+      <h1 style="text-align:center">A股市值超100亿股票名单</h1>
       <div class="date">数据截止：{date_display}（收盘）</div>
-      <div class="method">市值：腾讯财经API x Tushare总股本 · 行业：NeoData二级行业 · 财务：东方财富（2025年报） · 点击行查看详情</div>
+      <div class="method" style="text-align:center">市值：腾讯财经API x Tushare总股本 · 行业：NeoData二级行业 · 财务：东方财富（2025年报） · 点击行查看详情</div>
     </div>
-    <button id="viewToggle" class="view-toggle" onclick="toggleView()" title="切换手机版/桌面版">
+    <button id="viewToggle" class="view-toggle" onclick="toggleView()" title="切换手机版/桌面版" style="position:absolute;right:0;top:0">
       <span id="viewIcon">📱</span>
       <span id="viewLabel">手机版</span>
     </button>
-    </div>
+  </div>
   </div>
 </div>
 

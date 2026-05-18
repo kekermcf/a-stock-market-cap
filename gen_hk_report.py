@@ -150,7 +150,8 @@ tbody tr.ah-announced:hover{{background:#fdf2d1}}
 .ytd-card{{text-align:center;padding:12px;border-radius:10px;background:#f8f9fa}}
 .ytd-card .year{{font-size:13px;color:#888;margin-bottom:4px}}
 .ytd-card .val{{font-size:22px;font-weight:700}}
-.data-source{{font-size:11px;color:#aaa;text-align:center;margin-top:8px}}
+.data-source{{font-size:11px;color:#aaa;text-align:center;margin-top:8px;display:none}}
+body.mobile .data-source{{display:block}}
 .view-toggle{{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;white-space:nowrap;transition:background .2s;display:flex;align-items:center;gap:6px}}
 .view-toggle:hover{{background:rgba(255,255,255,.25)}}
 /* Mobile */
@@ -198,19 +199,18 @@ body.mobile .back-top{{display:block}}
 <div id="jsError" style="display:none;position:fixed;top:0;left:0;width:100%;padding:12px;background:#fee;color:#c00;z-index:9999;font-size:14px"></div>
 
 <div class="header">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+  <div style="position:relative">
     <div>
-      <nav style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-        <a href="index.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">🏠 首页</a>
+      <nav style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;justify-content:center">
         <a href="ashare.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">🇨🇳 A股</a>
         <a href="hongkong.html" style="color:#fff;text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(13,148,136,.5);font-weight:600">🇭🇰 H股</a>
         <a href="watchlist.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">⭐ 自选</a>
       </nav>
-      <h1>港股市值超250亿股票名单</h1>
+      <h1 style="text-align:center">港股市值超250亿股票名单</h1>
       <div class="date">数据截止：{date_display}（收盘）</div>
-      <div class="method">数据来源：AKShare · QQ Finance K-line · 市值单位：亿港币 · 点击行查看详情</div>
+      <div class="method" style="text-align:center">数据来源：AKShare · QQ Finance K-line · 市值单位：亿港币 · 点击行查看详情</div>
     </div>
-    <button id="viewToggle" class="view-toggle" onclick="toggleView()" title="切换手机版/桌面版">
+    <button id="viewToggle" class="view-toggle" onclick="toggleView()" title="切换手机版/桌面版" style="position:absolute;right:0;top:0">
       <span id="viewIcon">📱</span>
       <span id="viewLabel">手机版</span>
     </button>

@@ -247,7 +247,8 @@ body:not(.mobile) .back-top{{display:none}}
 .ytd-card{{text-align:center;padding:12px;border-radius:10px;background:#f8f9fa}}
 .ytd-card .year{{font-size:13px;color:#888;margin-bottom:4px}}
 .ytd-card .val{{font-size:22px;font-weight:700}}
-.data-source{{font-size:11px;color:#aaa;text-align:center;margin-top:8px}}
+.data-source{{font-size:11px;color:#aaa;text-align:center;margin-top:8px;display:none}}
+body.mobile .data-source{{display:block}}
 /* Mobile */
 body.mobile .container{{padding:0 12px}}
 body.mobile .header h1{{font-size:20px}}
@@ -302,18 +303,17 @@ body.mobile .modal-close{{width:44px;height:44px;font-size:22px}}
 <!-- Main content (hidden until pwd ok) -->
 <div class="main-content" id="mainContent">
   <div class="header">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div style="position:relative">
       <div>
-        <nav style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-          <a href="index.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">🏠 首页</a>
+        <nav style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;justify-content:center">
           <a href="ashare.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">🇨🇳 A股</a>
           <a href="hongkong.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">🇭🇰 H股</a>
           <a href="watchlist.html" style="color:#fff;text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(234,88,12,.5);font-weight:600">⭐ 自选</a>
         </nav>
-        <h1>⭐ keke自选股</h1>
+        <h1 style="text-align:center">⭐ keke自选股</h1>
         <div class="date">数据截止：{date_display}（收盘）</div>
       </div>
-      <button id="viewToggle" class="view-toggle" onclick="toggleView()" title="切换手机版/桌面版">
+      <button id="viewToggle" class="view-toggle" onclick="toggleView()" title="切换手机版/桌面版" style="position:absolute;right:0;top:0">
         <span id="viewIcon">📱</span>
         <span id="viewLabel">手机版</span>
       </button>
@@ -336,7 +336,7 @@ body.mobile .modal-close{{width:44px;height:44px;font-size:22px}}
           <option value="ytd_asc">YTD升序</option>
         </select>
       </div>
-      <div class="empty-msg" id="wlEmpty">暂无自选股，在<a href="index.html">主页</a>点击 ⭐ 即可添加</div>
+      <div class="empty-msg" id="wlEmpty">暂无自选股，在<a href="ashare.html">A股</a>或<a href="hongkong.html">H股</a>页面点击 ⭐ 即可添加</div>
       <div class="table-wrap" id="wlTableWrap" style="display:none">
         <table>
           <thead><tr>
