@@ -414,7 +414,7 @@ body.mobile .sanction-tag.on{{font-size:11px}}
         <option value="rumor">Rumor</option>
         <option value="none">无动作</option>
       </select>
-      <button id="sortHkDate" style="padding:8px 14px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" title="按H股上市时间倒序排列">🇭🇰 H股上市排序</button>
+      <button id="sortHkDate" style="padding:8px 14px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" title="按H股上市时间倒序排列">🇭🇰 H股次新股</button>
       <select id="sanctionFilter">
         <option value="">含制裁</option>
         <option value="exclude">排除制裁</option>
