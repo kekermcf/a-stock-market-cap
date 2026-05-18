@@ -683,6 +683,15 @@ function filterData() {
     }
     return true;
   });
+  // Reset sort to default (market cap descending) unless hkNewOn
+  if (hkNewOn) {
+    sortKey = 'hk_list_date';
+    sortDir = -1;
+  } else {
+    sortKey = 'total_mv';
+    sortDir = -1;
+  }
+
   doSort();
 
   // Fix: if current page exceeds filtered results, reset to page 1
