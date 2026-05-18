@@ -314,14 +314,13 @@ body.mobile .sanction-tag.on{font-size:11px}
 </select>
       <select id="mvFilter">
         <option value="0">全部市值</option>
-        <option value="100">100亿以上</option>
-        <option value="100-200">100-200亿</option>
-        <option value="200-300">200-300亿</option>
-        <option value="300-500">300-500亿</option>
-        <option value="500-1000">500-1000亿</option>
-        <option value="1000-3000">1000-3000亿</option>
-        <option value="3000-5000">3000-5000亿</option>
-        <option value="5000">5000亿以上</option>
+        <option value="100">&gt;100亿</option>
+        <option value="300">&gt;300亿</option>
+        <option value="500">&gt;500亿</option>
+        <option value="1000">&gt;1,000亿</option>
+        <option value="3000">&gt;3,000亿</option>
+        <option value="5000">&gt;5,000亿</option>
+        <option value="10000">&gt;10,000亿</option>
       </select>
       <select id="ahFilter">
         <option value="">全部状态</option>
@@ -330,7 +329,6 @@ body.mobile .sanction-tag.on{font-size:11px}
         <option value="rumor">Rumor</option>
         <option value="none">无动作</option>
       </select>
-      <button id="sortHkDate" style="padding:8px 14px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" title="按H股上市时间倒序排列">🇭🇰 H股次新股</button>
       <select id="sanctionFilter">
         <option value="">含制裁</option>
         <option value="exclude">排除制裁</option>
@@ -339,6 +337,7 @@ body.mobile .sanction-tag.on{font-size:11px}
         <option value="">含国企</option>
         <option value="exclude">排除国企</option>
       </select>
+      <button id="filterHkNew" style="padding:8px 14px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" title="仅显示A+H公司，按H股上市时间倒序">🇭🇰 H股次新股</button>
     </div>
     <div class="pagination" id="pagination"></div>
     <div class="table-wrap">
@@ -442,6 +441,7 @@ document.getElementById('jsError') && (document.getElementById('jsError').textCo
 
 var PAGE_SIZE = 60;
 var filtered = allData.slice();
+var hkNewOn = false;
 var curPage = 1;
 var sortKey = 'total_mv';
 var sortDir = -1;
@@ -657,7 +657,7 @@ function filterData() {
     mvMin = +mvVal;
   }
 
-  var isFiltered = !!(q || ind || mvVal !== '0' || ahVal || scVal || soeVal);
+  var isFiltered = !!(q || ind || mvVal !== '0' || ahVal || scVal || soeVal || hkNewOn);
 
   // Filter first, then check if current page is out of range
   filtered = allData.filter(function(r) {
@@ -670,6 +670,10 @@ function filterData() {
     }
     if (scVal === 'exclude' && isSanctioned(r.ts_code)) return false;
     if (soeVal === 'exclude' && isSOE(r.ts_code)) return false;
+    if (hkNewOn) {
+      var s = ahStatus[r.ts_code] || '';
+      if (s !== 'listed') return false;
+    }
     if (q) {
       var t = (r.ts_code + r.name + (r.industry || '')).toLowerCase();
       if (t.indexOf(q) === -1) return false;
@@ -737,15 +741,21 @@ document.getElementById('mvFilter').addEventListener('change', filterData);
 document.getElementById('ahFilter').addEventListener('change', filterData);
 document.getElementById('sanctionFilter').addEventListener('change', filterData);
 document.getElementById('soeFilter').addEventListener('change', filterData);
-document.getElementById('sortHkDate').addEventListener('click', function() {
-  if (sortKey === 'hk_list_date') sortDir *= -1;
-  else { sortKey = 'hk_list_date'; sortDir = -1; }
+document.getElementById('filterHkNew').addEventListener('click', function() {
+  hkNewOn = !hkNewOn;
+  if (hkNewOn) {
+    sortKey = 'hk_list_date';
+    sortDir = -1;
+  } else {
+    sortKey = 'rank';
+    sortDir = -1;
+  }
+  var btn = document.getElementById('filterHkNew');
+  btn.style.background = hkNewOn ? '#e0f2fe' : '#fff';
+  btn.style.borderColor = hkNewOn ? '#0d9488' : '#ddd';
+  btn.style.color = hkNewOn ? '#0d9488' : '#333';
   curPage = 1;
-  doSort();
-  render();
-  var btn = document.getElementById('sortHkDate');
-  btn.style.background = sortKey === 'hk_list_date' ? '#e8f4fd' : '#fff';
-  btn.style.borderColor = sortKey === 'hk_list_date' ? '#2196F3' : '#ddd';
+  filterData();
 });
 
 // ========== Modal ==========
