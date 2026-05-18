@@ -435,6 +435,7 @@ body.mobile .sanction-tag.on{{font-size:11px}}
         <option value="exclude">排除国企</option>
       </select>
       <button id="filterHkNew" style="padding:8px 14px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" title="仅显示A+H公司，按H股上市时间倒序">🇭🇰 H股次新股</button>
+      <button id="clearFilters" style="padding:8px 14px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap;color:#888" title="清除所有筛选条件">✕ 清除</button>
     </div>
     <div class="pagination" id="pagination"></div>
     <div class="table-wrap">
@@ -834,7 +835,23 @@ document.getElementById('filterHkNew').addEventListener('click', function() {{
   filterData();
 }});
 
-// ========== Modal ==========
+document.getElementById('clearFilters').addEventListener('click', function() {{
+  document.getElementById('searchInput').value = '';
+  document.getElementById('industryFilter').value = '';
+  document.getElementById('mvFilter').value = '0';
+  document.getElementById('ahFilter').value = '';
+  document.getElementById('sanctionFilter').value = '';
+  document.getElementById('soeFilter').value = '';
+  hkNewOn = false;
+  var hkBtn = document.getElementById('filterHkNew');
+  hkBtn.style.background = '#fff';
+  hkBtn.style.borderColor = '#ddd';
+  hkBtn.style.color = '#333';
+  sortKey = 'total_mv';
+  sortDir = -1;
+  curPage = 1;
+  filterData();
+}});
 function openModal(tsCode) {{
   var stock = null;
   for (var i = 0; i < allData.length; i++) {{
