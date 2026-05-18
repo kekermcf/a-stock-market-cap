@@ -151,7 +151,8 @@ if os.path.exists(ah_premia_path):
     with open(ah_premia_path, 'r', encoding='utf-8') as f:
         ah_premia = json.load(f)
 for d in embed_data:
-    d['ah_premium'] = ah_premia.get(d['ts_code'], None)
+    _ap = ah_premia.get(d['ts_code'], None)
+    d['ah_premium'] = -_ap if _ap is not None else None
 
 rj = json.dumps(embed_data, ensure_ascii=True)
 aj = json.dumps(ah_status, ensure_ascii=True)
@@ -839,7 +840,7 @@ function openModal(tsCode) {{
     subText += '  |  ' + stock.industry_l1;
   }}
   if (stock.ah_premium != null) {{
-    subText += '  |  AH\u6ea2\u4ef7 ' + (stock.ah_premium >= 0 ? '+' : '') + stock.ah_premium + '%';
+    subText += '  |  H\u6ea2\u4ef7 ' + (stock.ah_premium >= 0 ? '+' : '') + stock.ah_premium + '%';
   }}
   document.getElementById('modalSub').textContent = subText;
   var peStr = stock.pe ? stock.pe : '-';
