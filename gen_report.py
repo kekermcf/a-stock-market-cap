@@ -20,11 +20,11 @@ date_display = f'{trade_date[:4]}年{int(trade_date[4:6])}月{int(trade_date[6:8
 with open(f'{DATA_DIR}/stock_data_full.json', 'r', encoding='utf-8') as f:
     results_all = json.load(f)
 
-# Merge 100-200B stocks from QQ qt data
+# Merge supplementary stocks from QQ qt data
 existing_codes = {r['ts_code'] for r in results_all}
-mv_100_200_path = f'{DATA_DIR}/cache/mv_100_200_data.json'
-if os.path.exists(mv_100_200_path):
-    with open(mv_100_200_path, 'r', encoding='utf-8') as f:
+mv_mid_path = f'{DATA_DIR}/cache/mv_100_200_data.json'
+if os.path.exists(mv_mid_path):
+    with open(mv_mid_path, 'r', encoding='utf-8') as f:
         mv_mid = json.load(f)
     # Load annual_pctchg for ytd data
     pct_data = {}
@@ -37,7 +37,7 @@ if os.path.exists(mv_100_200_path):
         code = s.get('ts_code', '')
         if not code or code in existing_codes:
             continue
-        if s.get('total_mv', 0) < 100:
+        if s.get('total_mv', 0) < 200:
             continue
         pct = pct_data.get(code, {})
         results_all.append({
@@ -69,11 +69,11 @@ if os.path.exists(mv_100_200_path):
         })
         existing_codes.add(code)
         mid_added += 1
-    print(f'Merged {mid_added} stocks from 100-200B data')
+    print(f'Merged {mid_added} supplementary stocks (>=200B)')
 
-# Filter >= 100B
-results = [r for r in results_all if r.get('total_mv', 0) >= 100]
-print(f'{len(results)} stocks with MV >= 100B (from {len(results_all)} total)')
+# Filter >= 200B
+results = [r for r in results_all if r.get('total_mv', 0) >= 200]
+print(f'{len(results)} stocks with MV >= 200B (from {len(results_all)} total)')
 
 # Load A+H status
 ah_status = {}
@@ -190,7 +190,7 @@ html = f"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>A股市值超100亿股票名单（{trade_date}）</title>
+<title>A股市值超200亿股票名单（{trade_date}）</title>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
@@ -387,7 +387,7 @@ body.mobile .sanction-tag.on{{font-size:11px}}
         <a href="hongkong.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">🇭🇰 H股</a>
         <a href="watchlist.html" style="color:rgba(255,255,255,.7);text-decoration:none;font-size:13px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.1)">⭐ 自选</a>
       </nav>
-      <h1 style="text-align:center">A股市值超100亿股票名单</h1>
+      <h1 style="text-align:center">A股市值超200亿股票名单</h1>
       <div class="date">数据截止：{date_display}（收盘）</div>
       <div class="method" style="text-align:center">市值：腾讯财经API x Tushare总股本 · 行业：NeoData二级行业 · 财务：东方财富（2025年报） · 点击行查看详情</div>
     </div>
@@ -411,7 +411,7 @@ body.mobile .sanction-tag.on{{font-size:11px}}
       <select id="industryFilter"><option value="">全部行业</option>{ind_options}</select>
       <select id="mvFilter">
         <option value="0">全部市值</option>
-        <option value="100">&gt;100亿</option>
+        <option value="200">&gt;200亿</option>
         <option value="300">&gt;300亿</option>
         <option value="500">&gt;500亿</option>
         <option value="1000">&gt;1,000亿</option>
@@ -461,7 +461,7 @@ body.mobile .sanction-tag.on{{font-size:11px}}
   </div>
 
   <div class="stats">
-    <div class="stat-card"><div class="label">市值超100亿股票总数</div><div class="value">{total_stocks}</div></div>
+    <div class="stat-card"><div class="label">市值超200亿股票总数</div><div class="value">{total_stocks}</div></div>
     <div class="stat-card"><div class="label">有2025年报数据</div><div class="value blue">{has_fin}</div></div>
     <div class="stat-card"><div class="label">最大市值</div><div class="value red">{max_mv} 亿</div></div>
     <div class="stat-card"><div class="label">平均市值</div><div class="value">{avg_mv} 亿</div></div>
@@ -1121,7 +1121,7 @@ try {{
 </body>
 </html>"""
 
-output_path = f'{DATA_DIR}/A股市值超100亿名单_{trade_date}.html'
+output_path = f'{DATA_DIR}/A股市值超200亿名单_{trade_date}.html'
 with open(output_path, 'wb') as f:
     f.write(b'\xef\xbb\xbf')
     f.write(html.encode('utf-8'))
