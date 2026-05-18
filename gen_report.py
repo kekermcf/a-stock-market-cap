@@ -135,6 +135,15 @@ if os.path.exists(ah_map_path):
 for d in embed_data:
     d['hk_code'] = ah_code_map.get(d['ts_code'], '')
 
+# Load A+H HK listing dates
+ah_hk_dates = {}
+ah_hk_dates_path = f'{DATA_DIR}/cache/ah_hk_list_dates.json'
+if os.path.exists(ah_hk_dates_path):
+    with open(ah_hk_dates_path, 'r', encoding='utf-8') as f:
+        ah_hk_dates = json.load(f)
+for d in embed_data:
+    d['hk_list_date'] = ah_hk_dates.get(d['ts_code'], '')
+
 rj = json.dumps(embed_data, ensure_ascii=True)
 aj = json.dumps(ah_status, ensure_ascii=True)
 cj = json.dumps(ah_code_map, ensure_ascii=True)
@@ -208,6 +217,7 @@ tbody td{{padding:10px 8px;white-space:nowrap;text-align:right}}
 tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3),tbody td:nth-child(4){{text-align:left}}
 .code{{font-family:'SF Mono','Consolas',monospace;font-size:13px;color:#666}}
 .hk-code{{font-family:'SF Mono','Consolas',monospace;font-size:11px;color:#f39c12;line-height:1.2}}
+.hk-ld{{font-size:10px;color:#999;margin-left:4px;font-weight:400;white-space:nowrap}}
 .mv{{font-weight:600;color:#c0392b}}
 .chg-up{{color:#c0392b;font-weight:500}}
 .chg-dn{{color:#27ae60;font-weight:500}}
@@ -404,6 +414,7 @@ body.mobile .sanction-tag.on{{font-size:11px}}
         <option value="rumor">Rumor</option>
         <option value="none">无动作</option>
       </select>
+      <button id="sortHkDate" style="padding:8px 14px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" title="按H股上市时间倒序排列">🇭🇰 H股上市排序</button>
       <select id="sanctionFilter">
         <option value="">含制裁</option>
         <option value="exclude">排除制裁</option>
@@ -529,7 +540,7 @@ function render() {{
     rows.push('<tr data-code="' + r.ts_code + '" class="' + ahClass.trim() + '">' +
       '<td>' + rk + '</td>' +
       '<td class="code">' + r.ts_code + (r.hk_code ? '<br><span class="hk-code">' + r.hk_code + '.HK</span>' : '') + '</td>' +
-      '<td><b>' + r.name + '</b>' + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag off" data-code="' + r.ts_code + '">\u26d4</span></td>' +
+      '<td><b>' + r.name + '</b>' + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag off" data-code="' + r.ts_code + '">\u26d4</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + '</td>' +
       '<td>' + (r.industry || '-') + '</td>' +
       '<td class="mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '</td>' +
       '<td>' + ytdHtml(r.ytd_2024) + '</td>' +
@@ -566,7 +577,7 @@ function renderMobileList(pd) {{
     cards.push(
       '<div class="mobile-card' + ahClass + '" data-code="' + r.ts_code + '">' +
         '<div class="mc-top">' +
-          '<div class="mc-name" style="display:flex;align-items:center;gap:4px">' + r._rank + '. ' + r.name + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag off" data-code="' + r.ts_code + '">\u26d4</span></div>' +
+          '<div class="mc-name" style="display:flex;align-items:center;gap:4px">' + r._rank + '. ' + r.name + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag off" data-code="' + r.ts_code + '">\u26d4</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + '</div>' +
           '<div class="mc-mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '亿</div>' +
         '</div>' +
         '<div class="mc-info">' +
@@ -731,6 +742,13 @@ function filterData() {{
 function doSort() {{
   filtered.sort(function(a, b) {{
     if (sortKey === 'rank') return sortDir * (b.total_mv - a.total_mv);
+    if (sortKey === 'hk_list_date') {{
+      var va = a.hk_list_date || '', vb = b.hk_list_date || '';
+      if (va && vb) return sortDir * va.localeCompare(vb);
+      if (va) return -1;
+      if (vb) return 1;
+      return sortDir * (b.total_mv - a.total_mv);
+    }}
     var va = a[sortKey], vb = b[sortKey];
     if (va == null && vb == null) return 0;
     if (va == null) return 1;
@@ -773,6 +791,16 @@ document.getElementById('mvFilter').addEventListener('change', filterData);
 document.getElementById('ahFilter').addEventListener('change', filterData);
 document.getElementById('sanctionFilter').addEventListener('change', filterData);
 document.getElementById('soeFilter').addEventListener('change', filterData);
+document.getElementById('sortHkDate').addEventListener('click', function() {{
+  if (sortKey === 'hk_list_date') sortDir *= -1;
+  else {{ sortKey = 'hk_list_date'; sortDir = -1; }}
+  curPage = 1;
+  doSort();
+  render();
+  var btn = document.getElementById('sortHkDate');
+  btn.style.background = sortKey === 'hk_list_date' ? '#e8f4fd' : '#fff';
+  btn.style.borderColor = sortKey === 'hk_list_date' ? '#2196F3' : '#ddd';
+}});
 
 // ========== Modal ==========
 function openModal(tsCode) {{
