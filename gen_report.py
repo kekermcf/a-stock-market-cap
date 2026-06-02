@@ -576,8 +576,8 @@ function render() {{
       '<td class="biz-col">' + (r.business_desc || '-') + '</td>' +
       '<td class="col-ah-status">' + ahTag + '</td>' +
       '<td class="col-sanction" style="text-align:center">' + '<span class="sanction-tag ' + (defaultSanction.hasOwnProperty(r.ts_code) ? 'on' : 'off') + '" data-code="' + r.ts_code + '">' + (defaultSanction.hasOwnProperty(r.ts_code) ? getSanctionLabel(r.ts_code) : '\u26d4') + '</span>' + '</td>' +
-      '<td class="col-hk-date">' + (r.ah_status == 'listed' && r.hk_list_date ? '<span class="hk-ld">' + r.hk_list_date + '</span>' : '') + '</td>' +
-      '<td class="col-ah-prem">' + (r.ah_status == 'listed' && r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</td>' +
+      '<td class="col-hk-date">' + (ahStatus[r.ts_code] === 'listed' && r.hk_list_date ? '<span class="hk-ld">' + r.hk_list_date + '</span>' : '') + '</td>' +
+      '<td class="col-ah-prem">' + (ahStatus[r.ts_code] === 'listed' && r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</td>' +
       '<td class="mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '</td>' +
       '<td class="ytd-merged">' + ytdHtml(r.ytd_2024) + ' | ' + ytdHtml(r.ytd_2025) + ' | ' + ytdHtml(r.ytd_2026) + '</td>' +
       '<td>' + revHtml + '</td>' +
@@ -621,8 +621,8 @@ function renderMobileList(pd) {{
         '<div class="mc-ah-status" style="margin:4px 0;font-size:12px;color:#555;display:flex;gap:8px;flex-wrap:wrap">' +
           '<span class="mc-ah-status-item">' + ahTag + '</span>' +
           '<span class="mc-ah-status-item">' + '<span class="sanction-tag ' + (defaultSanction.hasOwnProperty(r.ts_code) ? 'on' : 'off') + '" data-code="' + r.ts_code + '">★</span>' + '</span>' +
-          '<span class="mc-ah-status-item">' + (r.ah_status == 'listed' && r.hk_list_date ? r.hk_list_date : '') + '</span>' +
-          '<span class="mc-ah-status-item">' + (r.ah_status == 'listed' && r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</span>' +
+          '<span class="mc-ah-status-item">' + (ahStatus[r.ts_code] === 'listed' && r.hk_list_date ? r.hk_list_date : '') + '</span>' +
+          '<span class="mc-ah-status-item">' + (ahStatus[r.ts_code] === 'listed' && r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</span>' +
         '</div>' +
         '<div class="mc-info">' +
           '<span class="code">' + r.ts_code + '</span>' +
