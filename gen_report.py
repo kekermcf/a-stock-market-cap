@@ -232,6 +232,9 @@ tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3),tbody td:nth-c
 .ah-prem{{font-size:10px;margin-left:4px;font-weight:600;white-space:nowrap}}
 .ah-prem.pos{{color:#e74c3c}}
 .ah-prem.neg{{color:#27ae60}}
+.ytd-merged{{white-space:nowrap}}
+.mc-ytd-merged{{font-size:12px;color:#555;margin-top:4px}}
+.fav-star{{cursor:pointer;font-size:15px;user-select:none}}
 .mv{{font-weight:600;color:#c0392b}}
 .chg-up{{color:#c0392b;font-weight:500}}
 .chg-dn{{color:#27ae60;font-weight:500}}
@@ -452,9 +455,7 @@ body.mobile .sanction-tag.on{{font-size:11px}}
           <th data-sort="industry">行业</th>
           <th data-sort="business_desc">主营业务</th>
           <th data-sort="total_mv">总市值(亿)</th>
-          <th data-sort="ytd_2024">2024至今</th>
-          <th data-sort="ytd_2025">2025至今</th>
-          <th data-sort="ytd_2026">2026至今</th>
+          <th data-sort="ytd_2024">2024至今 | 2025至今 | 2026至今</th>
           <th data-sort="revenue">2025收入(亿)</th>
           <th data-sort="gpr">毛利率</th>
           <th data-sort="net_profit">净利润(亿)</th>
@@ -559,14 +560,12 @@ function render() {{
     var npCls = r.net_profit != null ? (r.net_profit >= 0 ? 'fin-pos' : 'fin-neg') : '';
     rows.push('<tr data-code="' + r.ts_code + '" class="' + ahClass.trim() + '">' +
       '<td>' + rk + '</td>' +
-      '<td class="code">' + r.ts_code + (r.hk_code ? '<br><span class="hk-code">' + r.hk_code + '.HK</span>' : '') + '</td>' +
-      '<td class="name-cell"><div class="name-cell-left"><b>' + r.name + '</b>' + ahTag + '</div><div class="name-cell-right"><span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag ' + (defaultSanction.hasOwnProperty(r.ts_code) ? 'on' : 'off') + '" data-code="' + r.ts_code + '">' + (defaultSanction.hasOwnProperty(r.ts_code) ? getSanctionLabel(r.ts_code) : '\u26d4') + '</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</div></td>' +
+      '<td class="code"><span class="fav-star off" data-code="' + r.ts_code + '" style="margin-right:4px">\u2606</span>' + r.ts_code + (r.hk_code ? '<br><span class="hk-code">' + r.hk_code + '.HK</span>' : '') + '</td>' +
+      '<td><b>' + r.name + '</b>' + ahTag + '<span class="sanction-tag ' + (defaultSanction.hasOwnProperty(r.ts_code) ? 'on' : 'off') + '" data-code="' + r.ts_code + '">' + (defaultSanction.hasOwnProperty(r.ts_code) ? getSanctionLabel(r.ts_code) : '\u26d4') + '</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</td>' +
       '<td>' + (r.industry || '-') + '</td>' +
       '<td class="biz-col">' + (r.business_desc || '-') + '</td>' +
       '<td class="mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '</td>' +
-      '<td>' + ytdHtml(r.ytd_2024) + '</td>' +
-      '<td>' + ytdHtml(r.ytd_2025) + '</td>' +
-      '<td>' + ytdHtml(r.ytd_2026) + '</td>' +
+      '<td class="ytd-merged">' + ytdHtml(r.ytd_2024) + ' | ' + ytdHtml(r.ytd_2025) + ' | ' + ytdHtml(r.ytd_2026) + '</td>' +
       '<td>' + revHtml + '</td>' +
       '<td class="' + rateCls(r.gpr) + '">' + gprHtml + '</td>' +
       '<td class="' + npCls + '">' + npHtml + '</td>' +
@@ -598,20 +597,17 @@ function renderMobileList(pd) {{
     cards.push(
       '<div class="mobile-card' + ahClass + '" data-code="' + r.ts_code + '">' +
         '<div class="mc-top">' +
-          '<div class="mc-name" style="display:flex;align-items:center;justify-content:space-between;gap:4px;width:100%"><div style="display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden">' + r._rank + '. ' + r.name + ahTag + '</div><div style="display:flex;align-items:center;gap:4px;flex-shrink:0">' + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span>' + '<span class="sanction-tag ' + (defaultSanction.hasOwnProperty(r.ts_code) ? 'on' : 'off') + '" data-code="' + r.ts_code + '">' + (defaultSanction.hasOwnProperty(r.ts_code) ? getSanctionLabel(r.ts_code) : '\u26d4') + '</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</div></div>' +
+          '<div class="mc-name" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">' + r._rank + '. ' + r.name + ahTag + '<span class="sanction-tag ' + (defaultSanction.hasOwnProperty(r.ts_code) ? 'on' : 'off') + '" data-code="' + r.ts_code + '">' + (defaultSanction.hasOwnProperty(r.ts_code) ? getSanctionLabel(r.ts_code) : '\u26d4') + '</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</div>' +
           '<div class="mc-mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '亿</div>' +
         '</div>' +
         '<div class="mc-info">' +
+          '<span class="fav-star off" data-code="' + r.ts_code + '" style="margin-right:4px">\u2606</span>' +
           '<span class="code">' + r.ts_code + '</span>' +
           (r.hk_code ? '<span class="hk-code-m">' + r.hk_code + '.HK</span>' : '') +
           '<span>' + (r.industry || '-') + '</span>' +
         '</div>' +
         (r.business_desc ? '<div class="biz-col" style="margin-top:4px">' + r.business_desc + '</div>' : '') +
-        '<div class="mc-ytd">' +
-          '<div class="mc-ytd-item"><span class="year-label">24年初至今</span>' + ytd24 + '</div>' +
-          '<div class="mc-ytd-item"><span class="year-label">25年初至今</span>' + ytd25 + '</div>' +
-          '<div class="mc-ytd-item"><span class="year-label">YTD</span>' + ytd26 + '</div>' +
-        '</div>' +
+        '<div class="mc-ytd-merged">' + ytd24 + ' | ' + ytd25 + ' | ' + ytd26 + '</div>' +
         (r.revenue != null || r.net_profit != null ? '<div class="mc-fin">' +
           (r.revenue != null ? '<span>营收' + numfmt(r.revenue, 0) + '亿</span>' : '') +
           (r.net_profit != null ? '<span>净利' + numfmt(r.net_profit, 0) + '亿</span>' : '') +
