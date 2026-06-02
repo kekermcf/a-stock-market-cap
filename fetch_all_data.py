@@ -602,7 +602,12 @@ def main():
     
     # Step 3: NeoData公司简介
     print('\n[Step 3/6] NeoData Profiles (Industry L2, Company Info, Business Detail)')
-    profiles = fetch_neodata_profiles(stocks)
+    profiles = {}
+    try:
+        profiles = fetch_neodata_profiles(stocks)
+    except SystemExit:
+        print('  WARNING: NeoData query failed (token missing?), continuing without profiles...')
+        profiles = {}
     
     # Step 4: 月度市值K线
     print('\n[Step 4/6] Monthly MV Sampling')
