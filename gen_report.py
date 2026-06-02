@@ -73,17 +73,17 @@ if os.path.exists(mv_mid_path):
 
 # Filter >= 200B
 results = [r for r in results_all if r.get('total_mv', 0) >= 200]
-print(f'{len(results)} stocks with MV >= 200B (from {len(results_all)} total)')
+print(f'{len(results)} stocks with MV >= 200B')
 
-# Load A+H status
+# Load A+H status (needed for JS filter)
 ah_status = {}
 ah_path = f'{DATA_DIR}/cache/ah_status.json'
 if os.path.exists(ah_path):
     with open(ah_path, 'r', encoding='utf-8') as f:
         ah_status = json.load(f)
 
-# Load sanction list
-sanction_list = []
+# Load sanction list (dict: ts_code → ["NS-CMIC", "Entity List", ...])
+sanction_list = {}
 sl_path = f'{DATA_DIR}/cache/sanction_list.json'
 if os.path.exists(sl_path):
     with open(sl_path, 'r', encoding='utf-8') as f:
@@ -185,7 +185,8 @@ max_mv = f"{results[0]['total_mv']:,.0f}"
 avg_mv = f"{sum(r['total_mv'] for r in results)/len(results):,.0f}"
 med_mv = f"{results[len(results)//2]['total_mv']:,.0f}"
 
-html = f"""<!DOCTYPE html>
+html = f"""<!-- deploy:v20260602-3 -->
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -199,7 +200,7 @@ body{{font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-
 .header h1{{font-size:28px;margin-bottom:8px}}
 .header .date{{font-size:14px;opacity:.8}}
 .header .method{{font-size:12px;opacity:.6;margin-top:4px}}
-.container{{max-width:1500px;margin:0 auto 40px;padding:0 24px}}
+.container{{max-width:1900px;margin:0 auto 40px;padding:0 24px}}
 .section{{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:24px;overflow:hidden}}
 .section-title{{font-size:18px;font-weight:600;padding:16px 20px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:8px}}
 .controls{{padding:16px 20px;border-bottom:1px solid #eee;display:flex;gap:12px;flex-wrap:wrap;align-items:center}}
@@ -209,7 +210,7 @@ select{{padding:10px 16px;border:1px solid #ddd;border-radius:8px;font-size:14px
 .badge{{display:inline-block;background:#eef2ff;color:#4338ca;padding:2px 10px;border-radius:12px;font-size:13px;font-weight:500}}
 table{{width:100%;border-collapse:collapse;font-size:14px}}
 thead th{{background:#f8f9fa;padding:12px 8px;text-align:right;font-weight:600;color:#555;font-size:13px;position:sticky;top:0;cursor:pointer;user-select:none;white-space:nowrap;z-index:2}}
-thead th:nth-child(1),thead th:nth-child(2),thead th:nth-child(3),thead th:nth-child(4){{text-align:left}}
+thead th:nth-child(1),thead th:nth-child(2),thead th:nth-child(3),thead th:nth-child(4),thead th:nth-child(5),thead th:nth-child(6){{text-align:left}}
 thead th:hover{{background:#eef2ff}}
 tbody tr{{border-bottom:1px solid #f0f0f0;transition:background .15s;cursor:pointer}}
 tbody tr:hover{{background:#f8faff}}
@@ -224,13 +225,16 @@ tbody tr.ah-rumor:hover{{background:#ebe1f0}}
 .ah-tag.announced{{background:#f9e79f;color:#7d6608}}
 .ah-tag.rumor{{background:#e8daef;color:#6c3483}}
 tbody td{{padding:10px 8px;white-space:nowrap;text-align:right}}
-tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3),tbody td:nth-child(4){{text-align:left}}
+tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3),tbody td:nth-child(4),tbody td:nth-child(5),tbody td:nth-child(6){{text-align:left}}
 .code{{font-family:'SF Mono','Consolas',monospace;font-size:13px;color:#666}}
 .hk-code{{font-family:'SF Mono','Consolas',monospace;font-size:11px;color:#f39c12;line-height:1.2}}
 .hk-ld{{font-size:10px;color:#999;margin-left:4px;font-weight:400;white-space:nowrap}}
 .ah-prem{{font-size:10px;margin-left:4px;font-weight:600;white-space:nowrap}}
 .ah-prem.pos{{color:#e74c3c}}
 .ah-prem.neg{{color:#27ae60}}
+.ytd-merged{{white-space:nowrap}}
+.mc-ytd-merged{{font-size:12px;color:#555;margin-top:4px}}
+.fav-star{{cursor:pointer;font-size:15px;user-select:none}}
 .mv{{font-weight:600;color:#c0392b}}
 .chg-up{{color:#c0392b;font-weight:500}}
 .chg-dn{{color:#27ae60;font-weight:500}}
@@ -240,7 +244,14 @@ tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3),tbody td:nth-c
 .rate-neg{{color:#c0392b}}
 .rate-val{{color:#2980b9;font-weight:500}}
 .pending{{color:#bbb;font-style:italic;font-size:12px}}
+.biz-col{{max-width:300px;font-size:13px;color:#555;text-align:left;white-space:normal;word-break:break-all}}
+.col-ah-status,.col-sanction,.col-hk-date,.col-ah-prem{{white-space:nowrap;text-align:center}}
+.col-hk-date{{font-size:11px;color:#999}}
+.col-ah-prem{{font-size:11px;font-weight:600}}
 .no-report{{color:#999;font-size:11px}}
+.name-cell{{display:flex;align-items:center;justify-content:space-between;width:100%;min-width:0}}
+.name-cell-left{{display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden}}
+.name-cell-right{{display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:8px}}
 .table-wrap{{max-height:700px;overflow-y:auto}}
 .stats{{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:24px 0}}
 .stat-card{{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.06)}}
@@ -339,6 +350,7 @@ body.mobile .modal-close{{width:44px;height:44px;font-size:22px}}
 .mobile-card.ah-announced{{background:#fef9e7}}
 .mobile-card.ah-rumor{{background:#f5eef8}}
 .mc-top{{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}}
+.mc-rank{{font-size:12px;color:#999;margin-right:6px;font-weight:600}}
 .mc-name{{font-size:16px;font-weight:700;color:#1a1a2e}}
 .mc-name .ah-tag{{font-size:10px;padding:1px 5px;margin-left:4px}}
 .mc-mv{{font-size:18px;font-weight:700;color:#c0392b}}
@@ -442,13 +454,17 @@ body.mobile .sanction-tag.on{{font-size:11px}}
       <table>
         <thead><tr>
           <th data-sort="rank">排名</th>
+          <th data-sort="fav" style="width:32px;text-align:center">收藏</th>
           <th data-sort="ts_code">代码</th>
           <th data-sort="name">名称</th>
           <th data-sort="industry">行业</th>
+          <th data-sort="business_desc">主营业务</th>
+          <th data-sort="ah_status">A+H状态</th>
+          <th style="text-align:center">制裁</th>
+          <th style="text-align:center">H上市日</th>
+          <th data-sort="ah_premium">H/A溢价</th>
           <th data-sort="total_mv">总市值(亿)</th>
-          <th data-sort="ytd_2024">2024至今</th>
-          <th data-sort="ytd_2025">2025至今</th>
-          <th data-sort="ytd_2026">2026至今</th>
+          <th data-sort="ytd_2024">24TD | 25TD | YTD</th>
           <th data-sort="revenue">2025收入(亿)</th>
           <th data-sort="gpr">毛利率</th>
           <th data-sort="net_profit">净利润(亿)</th>
@@ -498,7 +514,7 @@ window.onerror = function(msg, url, line) {{
 var allData = {rj};
 var ahStatus = {aj};  // A+H status: "listed", "announced", or "rumor"
 var ahCodeMap = {cj};  // A-share code -> H-share code
-var defaultSanction = {sj};  // Pre-loaded sanction list
+var defaultSanction = {sj};  // Pre-loaded sanction dict: ts_code → ["NS-CMIC", "Entity List", ...]
 var defaultSOE = {soej};  // Pre-loaded SOE list
 // 预计算每只股票按市值降序的原始排名
 var mvRank = {{}};
@@ -553,13 +569,17 @@ function render() {{
     var npCls = r.net_profit != null ? (r.net_profit >= 0 ? 'fin-pos' : 'fin-neg') : '';
     rows.push('<tr data-code="' + r.ts_code + '" class="' + ahClass.trim() + '">' +
       '<td>' + rk + '</td>' +
+      '<td style="text-align:center">' + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span>' + '</td>' +
       '<td class="code">' + r.ts_code + (r.hk_code ? '<br><span class="hk-code">' + r.hk_code + '.HK</span>' : '') + '</td>' +
-      '<td><b>' + r.name + '</b>' + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag off" data-code="' + r.ts_code + '">\u26d4</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</td>' +
+      '<td><b>' + r.name + '</b></td>' +
       '<td>' + (r.industry || '-') + '</td>' +
+      '<td class="biz-col">' + (r.business_desc || '-') + '</td>' +
+      '<td class="col-ah-status">' + ahTag + '</td>' +
+      '<td class="col-sanction" style="text-align:center">' + '<span class="sanction-tag ' + (defaultSanction.hasOwnProperty(r.ts_code) ? 'on' : 'off') + '" data-code="' + r.ts_code + '">' + (defaultSanction.hasOwnProperty(r.ts_code) ? getSanctionLabel(r.ts_code) : '\u26d4') + '</span>' + '</td>' +
+      '<td class="col-hk-date">' + (ahStatus[r.ts_code] === 'listed' && r.hk_list_date ? '<span class="hk-ld">' + r.hk_list_date + '</span>' : '') + '</td>' +
+      '<td class="col-ah-prem">' + (ahStatus[r.ts_code] === 'listed' && r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</td>' +
       '<td class="mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '</td>' +
-      '<td>' + ytdHtml(r.ytd_2024) + '</td>' +
-      '<td>' + ytdHtml(r.ytd_2025) + '</td>' +
-      '<td>' + ytdHtml(r.ytd_2026) + '</td>' +
+      '<td class="ytd-merged">' + ytdHtml(r.ytd_2024) + ' | ' + ytdHtml(r.ytd_2025) + ' | ' + ytdHtml(r.ytd_2026) + '</td>' +
       '<td>' + revHtml + '</td>' +
       '<td class="' + rateCls(r.gpr) + '">' + gprHtml + '</td>' +
       '<td class="' + npCls + '">' + npHtml + '</td>' +
@@ -590,20 +610,27 @@ function renderMobileList(pd) {{
     var ytd26 = r.ytd_2026 != null ? ytdHtml(r.ytd_2026) : '<span class="pending">-</span>';
     cards.push(
       '<div class="mobile-card' + ahClass + '" data-code="' + r.ts_code + '">' +
+        '<div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">' +
+          '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span>' +
+          '<span class="mc-rank">' + r._rank + '</span>' +
+        '</div>' +
         '<div class="mc-top">' +
-          '<div class="mc-name" style="display:flex;align-items:center;gap:4px">' + r._rank + '. ' + r.name + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag off" data-code="' + r.ts_code + '">\u26d4</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</div>' +
+          '<div class="mc-name" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">' + r.name + '</div>' +
           '<div class="mc-mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '亿</div>' +
+        '</div>' +
+        '<div class="mc-ah-status" style="margin:4px 0;font-size:12px;color:#555;display:flex;gap:8px;flex-wrap:wrap">' +
+          '<span class="mc-ah-status-item">' + ahTag + '</span>' +
+          '<span class="mc-ah-status-item">' + '<span class="sanction-tag ' + (defaultSanction.hasOwnProperty(r.ts_code) ? 'on' : 'off') + '" data-code="' + r.ts_code + '">★</span>' + '</span>' +
+          '<span class="mc-ah-status-item">' + (ahStatus[r.ts_code] === 'listed' && r.hk_list_date ? r.hk_list_date : '') + '</span>' +
+          '<span class="mc-ah-status-item">' + (ahStatus[r.ts_code] === 'listed' && r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</span>' +
         '</div>' +
         '<div class="mc-info">' +
           '<span class="code">' + r.ts_code + '</span>' +
           (r.hk_code ? '<span class="hk-code-m">' + r.hk_code + '.HK</span>' : '') +
           '<span>' + (r.industry || '-') + '</span>' +
         '</div>' +
-        '<div class="mc-ytd">' +
-          '<div class="mc-ytd-item"><span class="year-label">24年初至今</span>' + ytd24 + '</div>' +
-          '<div class="mc-ytd-item"><span class="year-label">25年初至今</span>' + ytd25 + '</div>' +
-          '<div class="mc-ytd-item"><span class="year-label">YTD</span>' + ytd26 + '</div>' +
-        '</div>' +
+        (r.business_desc ? '<div class="biz-col" style="margin-top:4px">' + r.business_desc + '</div>' : '') +
+        '<div class="mc-ytd-merged">' + ytd24 + ' | ' + ytd25 + ' | ' + ytd26 + '</div>' +
         (r.revenue != null || r.net_profit != null ? '<div class="mc-fin">' +
           (r.revenue != null ? '<span>营收' + numfmt(r.revenue, 0) + '亿</span>' : '') +
           (r.net_profit != null ? '<span>净利' + numfmt(r.net_profit, 0) + '亿</span>' : '') +
@@ -868,6 +895,9 @@ function openModal(tsCode) {{
   if (stock.ah_premium != null) {{
     subText += '  |  H/A\u6ea2\u4ef7 ' + (stock.ah_premium >= 0 ? '+' : '') + stock.ah_premium + '%';
   }}
+  if (isSanctioned(tsCode)) {{
+    subText += '  |  \u26d4 ' + getSanctionLabel(tsCode);
+  }}
   document.getElementById('modalSub').textContent = subText;
   var peStr = stock.pe ? stock.pe : '-';
   var pbStr = stock.pb ? stock.pb : '-';
@@ -1069,19 +1099,34 @@ function loadSanctionList() {{
   try {{
     var raw = localStorage.getItem(SC_KEY);
     var local = raw ? JSON.parse(raw) : [];
-    // Merge: defaultSanction (from data) + localStorage (user toggles)
-    var merged = defaultSanction.slice();
+    // sanctionList only stores user-toggled codes (not in defaultSanction)
+    sanctionList = [];
     for (var i = 0; i < local.length; i++) {{
-      if (merged.indexOf(local[i]) < 0) merged.push(local[i]);
+      if (!defaultSanction.hasOwnProperty(local[i])) {{
+        sanctionList.push(local[i]);
+      }}
     }}
-    sanctionList = merged;
-  }} catch(e) {{ sanctionList = defaultSanction.slice(); }}
+  }} catch(e) {{ sanctionList = []; }}
   return sanctionList;
 }}
 loadSanctionList();
 
 function isSanctioned(tsCode) {{
-  return sanctionList.indexOf(tsCode) >= 0 || defaultSanction.indexOf(tsCode) >= 0;
+  return defaultSanction.hasOwnProperty(tsCode) || sanctionList.indexOf(tsCode) >= 0;
+}}
+
+function getSanctionLabel(tsCode) {{
+  if (defaultSanction.hasOwnProperty(tsCode)) {{
+    var tags = defaultSanction[tsCode];
+    var hasNS = tags.indexOf('NS-CMIC') >= 0;
+    var hasEL = tags.indexOf('Entity List') >= 0;
+    if (hasNS && hasEL) return 'NS-CMIC+EL';
+    if (hasNS) return 'NS-CMIC';
+    if (hasEL) return 'Entity List';
+    return tags.join('+');
+  }}
+  if (sanctionList.indexOf(tsCode) >= 0) return 'US\\u5236\\u88c1';
+  return '';
 }}
 
 function isSOE(tsCode) {{
@@ -1089,6 +1134,8 @@ function isSOE(tsCode) {{
 }}
 
 function toggleSanction(tsCode) {{
+  // Cannot toggle off defaultSanction companies (they are always shown)
+  if (defaultSanction.hasOwnProperty(tsCode)) return;
   var idx = sanctionList.indexOf(tsCode);
   if (idx >= 0) {{
     sanctionList.splice(idx, 1);
@@ -1105,11 +1152,11 @@ function updateSanctionTags() {{
   for (var i = 0; i < tags.length; i++) {{
     var t = tags[i];
     var code = t.getAttribute('data-code');
-    if (sanctionList.indexOf(code) >= 0) {{
-      t.textContent = 'US\u5236\u88c1';
+    if (isSanctioned(code)) {{
+      t.textContent = getSanctionLabel(code);
       t.className = 'sanction-tag on';
     }} else {{
-      t.textContent = '\u26d4';
+      t.textContent = '\\u26d4';
       t.className = 'sanction-tag off';
     }}
   }}
@@ -1119,7 +1166,7 @@ function updateSanctionRows() {{
   var rows = document.querySelectorAll('tr[data-code]');
   for (var i = 0; i < rows.length; i++) {{
     var code = rows[i].getAttribute('data-code');
-    if (sanctionList.indexOf(code) >= 0) {{
+    if (isSanctioned(code)) {{
       rows[i].classList.add('sanction-row');
     }} else {{
       rows[i].classList.remove('sanction-row');
@@ -1128,7 +1175,7 @@ function updateSanctionRows() {{
   var cards = document.querySelectorAll('.mobile-card[data-code]');
   for (var i = 0; i < cards.length; i++) {{
     var code = cards[i].getAttribute('data-code');
-    if (sanctionList.indexOf(code) >= 0) {{
+    if (isSanctioned(code)) {{
       cards[i].classList.add('sanction-row');
     }} else {{
       cards[i].classList.remove('sanction-row');

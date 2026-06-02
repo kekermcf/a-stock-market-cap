@@ -221,11 +221,11 @@
   "688498.SH": "announced",
   "601136.SH": "announced",
   "300015.SZ": "rumor",
-  "600415.SH": "rumor",
+  "600415.SH": "announced",
   "000988.SZ": "announced",
   "002920.SZ": "announced",
   "002487.SZ": "announced",
-  "301087.SZ": "announced",
+  "301087.SZ": "listed",
   "002747.SZ": "listed",
   "601966.SH": "listed",
   "001389.SZ": "listed",
@@ -237,5 +237,10 @@
   "601868.SH": "listed",
   "603341.SH": "listed",
   "688347.SH": "listed",
-  "688796.SH": "listed"
+  "688796.SH": "listed",
+  "688521.SH": "announced",
+  "688110.SH": "announced",
+  "688403.SH": "announced",
+  "301308.SZ": "announced",
+  "688062.SH": "listed"
 }
