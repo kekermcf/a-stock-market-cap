@@ -308,7 +308,7 @@ def parse_neodata_mainbiz(content):
         biz_text = m.group(1).strip()
         items = re.findall(r'(.+?)收入([\d,.]+)亿元（占比([\d.]+)%）', biz_text)
         if items:
-            result['main_biz'] = [(name.strip(), float(rev), float(pct)) for name, rev, pct in items]
+            result['main_biz'] = [(name.strip(), float(rev.replace(',', '')), float(pct)) for name, rev, pct in items]
     
     # 主营收入产品分布（更细分）
     prod_pattern = r'主营收入产品分布[：:]\n((?:.*\n)*?)(?=\n最近几年|$)'
@@ -326,7 +326,7 @@ def parse_neodata_mainbiz(content):
         region_text = m.group(1).strip()
         regions = re.findall(r'(.+?)收入([\d,.]+)亿元（占比([\d.]+)%）', region_text)
         if regions:
-            result['regions'] = [(name.strip(), float(rev), float(pct)) for name, rev, pct in regions]
+            result['regions'] = [(name.strip(), float(rev.replace(',', '')), float(pct)) for name, rev, pct in regions]
     
     return result
 
