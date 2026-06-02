@@ -200,7 +200,7 @@ body{{font-family:-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-
 .header h1{{font-size:28px;margin-bottom:8px}}
 .header .date{{font-size:14px;opacity:.8}}
 .header .method{{font-size:12px;opacity:.6;margin-top:4px}}
-.container{{max-width:1500px;margin:0 auto 40px;padding:0 24px}}
+.container{{max-width:1900px;margin:0 auto 40px;padding:0 24px}}
 .section{{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:24px;overflow:hidden}}
 .section-title{{font-size:18px;font-weight:600;padding:16px 20px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:8px}}
 .controls{{padding:16px 20px;border-bottom:1px solid #eee;display:flex;gap:12px;flex-wrap:wrap;align-items:center}}
@@ -241,6 +241,7 @@ tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3),tbody td:nth-c
 .rate-neg{{color:#c0392b}}
 .rate-val{{color:#2980b9;font-weight:500}}
 .pending{{color:#bbb;font-style:italic;font-size:12px}}
+.biz-col{{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:#555}}
 .no-report{{color:#999;font-size:11px}}
 .table-wrap{{max-height:700px;overflow-y:auto}}
 .stats{{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:24px 0}}
@@ -446,6 +447,7 @@ body.mobile .sanction-tag.on{{font-size:11px}}
           <th data-sort="ts_code">代码</th>
           <th data-sort="name">名称</th>
           <th data-sort="industry">行业</th>
+          <th data-sort="business_desc">主营业务</th>
           <th data-sort="total_mv">总市值(亿)</th>
           <th data-sort="ytd_2024">2024至今</th>
           <th data-sort="ytd_2025">2025至今</th>
@@ -557,6 +559,7 @@ function render() {{
       '<td class="code">' + r.ts_code + (r.hk_code ? '<br><span class="hk-code">' + r.hk_code + '.HK</span>' : '') + '</td>' +
       '<td><b>' + r.name + '</b>' + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag ' + (defaultSanction.hasOwnProperty(r.ts_code) ? 'on' : 'off') + '" data-code="' + r.ts_code + '">' + (defaultSanction.hasOwnProperty(r.ts_code) ? getSanctionLabel(r.ts_code) : '\u26d4') + '</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</td>' +
       '<td>' + (r.industry || '-') + '</td>' +
+      '<td class="biz-col">' + (r.business_desc || '-') + '</td>' +
       '<td class="mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '</td>' +
       '<td>' + ytdHtml(r.ytd_2024) + '</td>' +
       '<td>' + ytdHtml(r.ytd_2025) + '</td>' +
@@ -600,6 +603,7 @@ function renderMobileList(pd) {{
           (r.hk_code ? '<span class="hk-code-m">' + r.hk_code + '.HK</span>' : '') +
           '<span>' + (r.industry || '-') + '</span>' +
         '</div>' +
+        (r.business_desc ? '<div class="biz-col" style="margin-top:4px">' + r.business_desc + '</div>' : '') +
         '<div class="mc-ytd">' +
           '<div class="mc-ytd-item"><span class="year-label">24年初至今</span>' + ytd24 + '</div>' +
           '<div class="mc-ytd-item"><span class="year-label">25年初至今</span>' + ytd25 + '</div>' +
