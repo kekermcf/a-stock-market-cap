@@ -82,6 +82,18 @@ if os.path.exists(ah_path):
     with open(ah_path, 'r', encoding='utf-8') as f:
         ah_status = json.load(f)
 
+# Include A+H listed companies regardless of MV threshold
+ah_listed = {k for k, v in ah_status.items() if v == 'listed'}
+existing_codes = {r['ts_code'] for r in results}
+added_ah = 0
+for r in results_all:
+    if r['ts_code'] in ah_listed and r['ts_code'] not in existing_codes:
+        results.append(r)
+        added_ah += 1
+if added_ah:
+    print(f'Added {added_ah} A+H listed companies (<200B) to results')
+print(f'{len(results)} total stocks (MV>=200B or A+H listed)')
+
 # Load sanction list (dict: ts_code → ["NS-CMIC", "Entity List", ...])
 sanction_list = {}
 sl_path = f'{DATA_DIR}/cache/sanction_list.json'
