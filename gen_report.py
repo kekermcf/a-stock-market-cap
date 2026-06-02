@@ -82,8 +82,8 @@ if os.path.exists(ah_path):
     with open(ah_path, 'r', encoding='utf-8') as f:
         ah_status = json.load(f)
 
-# Load sanction list
-sanction_list = []
+# Load sanction list (dict: ts_code → ["NS-CMIC", "Entity List", ...])
+sanction_list = {}
 sl_path = f'{DATA_DIR}/cache/sanction_list.json'
 if os.path.exists(sl_path):
     with open(sl_path, 'r', encoding='utf-8') as f:
@@ -185,7 +185,7 @@ max_mv = f"{results[0]['total_mv']:,.0f}"
 avg_mv = f"{sum(r['total_mv'] for r in results)/len(results):,.0f}"
 med_mv = f"{results[len(results)//2]['total_mv']:,.0f}"
 
-html = f"""<!-- deploy:v20260602-2 -->
+html = f"""<!-- deploy:v20260602-3 -->
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -499,7 +499,7 @@ window.onerror = function(msg, url, line) {{
 var allData = {rj};
 var ahStatus = {aj};  // A+H status: "listed", "announced", or "rumor"
 var ahCodeMap = {cj};  // A-share code -> H-share code
-var defaultSanction = {sj};  // Pre-loaded sanction list
+var defaultSanction = {sj};  // Pre-loaded sanction dict: ts_code → ["NS-CMIC", "Entity List", ...]
 var defaultSOE = {soej};  // Pre-loaded SOE list
 // 预计算每只股票按市值降序的原始排名
 var mvRank = {{}};
@@ -555,7 +555,7 @@ function render() {{
     rows.push('<tr data-code="' + r.ts_code + '" class="' + ahClass.trim() + '">' +
       '<td>' + rk + '</td>' +
       '<td class="code">' + r.ts_code + (r.hk_code ? '<br><span class="hk-code">' + r.hk_code + '.HK</span>' : '') + '</td>' +
-      '<td><b>' + r.name + '</b>' + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag ' + (defaultSanction.indexOf(r.ts_code) >= 0 ? 'on' : 'off') + '" data-code="' + r.ts_code + '">' + (defaultSanction.indexOf(r.ts_code) >= 0 ? 'US\u5236\u88c1' : '\u26d4') + '</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</td>' +
+      '<td><b>' + r.name + '</b>' + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag ' + (defaultSanction.hasOwnProperty(r.ts_code) ? 'on' : 'off') + '" data-code="' + r.ts_code + '">' + (defaultSanction.hasOwnProperty(r.ts_code) ? getSanctionLabel(r.ts_code) : '\u26d4') + '</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</td>' +
       '<td>' + (r.industry || '-') + '</td>' +
       '<td class="mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '</td>' +
       '<td>' + ytdHtml(r.ytd_2024) + '</td>' +
@@ -592,7 +592,7 @@ function renderMobileList(pd) {{
     cards.push(
       '<div class="mobile-card' + ahClass + '" data-code="' + r.ts_code + '">' +
         '<div class="mc-top">' +
-          '<div class="mc-name" style="display:flex;align-items:center;gap:4px">' + r._rank + '. ' + r.name + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag ' + (defaultSanction.indexOf(r.ts_code) >= 0 ? 'on' : 'off') + '" data-code="' + r.ts_code + '">' + (defaultSanction.indexOf(r.ts_code) >= 0 ? 'US\u5236\u88c1' : '\u26d4') + '</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</div>' +
+          '<div class="mc-name" style="display:flex;align-items:center;gap:4px">' + r._rank + '. ' + r.name + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag ' + (defaultSanction.hasOwnProperty(r.ts_code) ? 'on' : 'off') + '" data-code="' + r.ts_code + '">' + (defaultSanction.hasOwnProperty(r.ts_code) ? getSanctionLabel(r.ts_code) : '\u26d4') + '</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</div>' +
           '<div class="mc-mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '亿</div>' +
         '</div>' +
         '<div class="mc-info">' +
@@ -869,6 +869,9 @@ function openModal(tsCode) {{
   if (stock.ah_premium != null) {{
     subText += '  |  H/A\u6ea2\u4ef7 ' + (stock.ah_premium >= 0 ? '+' : '') + stock.ah_premium + '%';
   }}
+  if (isSanctioned(tsCode)) {{
+    subText += '  |  \u26d4 ' + getSanctionLabel(tsCode);
+  }}
   document.getElementById('modalSub').textContent = subText;
   var peStr = stock.pe ? stock.pe : '-';
   var pbStr = stock.pb ? stock.pb : '-';
@@ -1070,19 +1073,34 @@ function loadSanctionList() {{
   try {{
     var raw = localStorage.getItem(SC_KEY);
     var local = raw ? JSON.parse(raw) : [];
-    // Merge: defaultSanction (from data) + localStorage (user toggles)
-    var merged = defaultSanction.slice();
+    // sanctionList only stores user-toggled codes (not in defaultSanction)
+    sanctionList = [];
     for (var i = 0; i < local.length; i++) {{
-      if (merged.indexOf(local[i]) < 0) merged.push(local[i]);
+      if (!defaultSanction.hasOwnProperty(local[i])) {{
+        sanctionList.push(local[i]);
+      }}
     }}
-    sanctionList = merged;
-  }} catch(e) {{ sanctionList = defaultSanction.slice(); }}
+  }} catch(e) {{ sanctionList = []; }}
   return sanctionList;
 }}
 loadSanctionList();
 
 function isSanctioned(tsCode) {{
-  return sanctionList.indexOf(tsCode) >= 0 || defaultSanction.indexOf(tsCode) >= 0;
+  return defaultSanction.hasOwnProperty(tsCode) || sanctionList.indexOf(tsCode) >= 0;
+}}
+
+function getSanctionLabel(tsCode) {{
+  if (defaultSanction.hasOwnProperty(tsCode)) {{
+    var tags = defaultSanction[tsCode];
+    var hasNS = tags.indexOf('NS-CMIC') >= 0;
+    var hasEL = tags.indexOf('Entity List') >= 0;
+    if (hasNS && hasEL) return 'NS-CMIC+EL';
+    if (hasNS) return 'NS-CMIC';
+    if (hasEL) return 'Entity List';
+    return tags.join('+');
+  }}
+  if (sanctionList.indexOf(tsCode) >= 0) return 'US\\u5236\\u88c1';
+  return '';
 }}
 
 function isSOE(tsCode) {{
@@ -1090,6 +1108,8 @@ function isSOE(tsCode) {{
 }}
 
 function toggleSanction(tsCode) {{
+  // Cannot toggle off defaultSanction companies (they are always shown)
+  if (defaultSanction.hasOwnProperty(tsCode)) return;
   var idx = sanctionList.indexOf(tsCode);
   if (idx >= 0) {{
     sanctionList.splice(idx, 1);
@@ -1107,10 +1127,10 @@ function updateSanctionTags() {{
     var t = tags[i];
     var code = t.getAttribute('data-code');
     if (isSanctioned(code)) {{
-      t.textContent = 'US\u5236\u88c1';
+      t.textContent = getSanctionLabel(code);
       t.className = 'sanction-tag on';
     }} else {{
-      t.textContent = '\u26d4';
+      t.textContent = '\\u26d4';
       t.className = 'sanction-tag off';
     }}
   }}

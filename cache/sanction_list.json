@@ -1,35 +1,129 @@
-[
-  "600893.SH",
-  "000738.SZ",
-  "000547.SZ",
-  "600879.SH",
-  "600862.SH",
-  "002179.SZ",
-  "600760.SH",
-  "600765.SH",
-  "003816.SZ",
-  "600498.SH",
-  "002230.SZ",
-  "002415.SZ",
-  "002236.SZ",
-  "688981.SH",
-  "000977.SZ",
-  "688047.SH",
-  "688256.SH",
-  "300474.SZ",
-  "600941.SH",
-  "600050.SH",
-  "601728.SH",
-  "600938.SH",
-  "601808.SH",
-  "601800.SH",
-  "601390.SH",
-  "601186.SH",
-  "601766.SH",
-  "600150.SH",
-  "600685.SH",
-  "000768.SZ",
-  "601985.SH",
-  "000519.SZ",
-  "600562.SH"
-]
+{
+  "600893.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "000738.SZ": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "000547.SZ": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "600879.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "600862.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "002179.SZ": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "600760.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "600765.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "003816.SZ": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "600498.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "002230.SZ": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "002415.SZ": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "002236.SZ": [
+    "Entity List"
+  ],
+  "688981.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "000977.SZ": [
+    "Entity List"
+  ],
+  "688047.SH": [
+    "Entity List"
+  ],
+  "688256.SH": [
+    "Entity List"
+  ],
+  "300474.SZ": [
+    "Entity List"
+  ],
+  "600941.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "600050.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "601728.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "600938.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "601808.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "601800.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "601390.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "601186.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "601766.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "600150.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "600685.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "000768.SZ": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "601985.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "000519.SZ": [
+    "NS-CMIC",
+    "Entity List"
+  ],
+  "600562.SH": [
+    "NS-CMIC",
+    "Entity List"
+  ]
+}
