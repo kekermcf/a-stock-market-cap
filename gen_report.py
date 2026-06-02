@@ -554,7 +554,7 @@ function render() {{
     rows.push('<tr data-code="' + r.ts_code + '" class="' + ahClass.trim() + '">' +
       '<td>' + rk + '</td>' +
       '<td class="code">' + r.ts_code + (r.hk_code ? '<br><span class="hk-code">' + r.hk_code + '.HK</span>' : '') + '</td>' +
-      '<td><b>' + r.name + '</b>' + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag off" data-code="' + r.ts_code + '">\u26d4</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</td>' +
+      '<td><b>' + r.name + '</b>' + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag ' + (defaultSanction.indexOf(r.ts_code) >= 0 ? 'on' : 'off') + '" data-code="' + r.ts_code + '">' + (defaultSanction.indexOf(r.ts_code) >= 0 ? 'US\u5236\u88c1' : '\u26d4') + '</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</td>' +
       '<td>' + (r.industry || '-') + '</td>' +
       '<td class="mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '</td>' +
       '<td>' + ytdHtml(r.ytd_2024) + '</td>' +
@@ -591,7 +591,7 @@ function renderMobileList(pd) {{
     cards.push(
       '<div class="mobile-card' + ahClass + '" data-code="' + r.ts_code + '">' +
         '<div class="mc-top">' +
-          '<div class="mc-name" style="display:flex;align-items:center;gap:4px">' + r._rank + '. ' + r.name + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag off" data-code="' + r.ts_code + '">\u26d4</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</div>' +
+          '<div class="mc-name" style="display:flex;align-items:center;gap:4px">' + r._rank + '. ' + r.name + ahTag + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span><span class="sanction-tag ' + (defaultSanction.indexOf(r.ts_code) >= 0 ? 'on' : 'off') + '" data-code="' + r.ts_code + '">' + (defaultSanction.indexOf(r.ts_code) >= 0 ? 'US\u5236\u88c1' : '\u26d4') + '</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</div>' +
           '<div class="mc-mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '亿</div>' +
         '</div>' +
         '<div class="mc-info">' +
