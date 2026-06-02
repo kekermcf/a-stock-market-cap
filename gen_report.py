@@ -457,9 +457,9 @@ body.mobile .sanction-tag.on{{font-size:11px}}
           <th data-sort="name">名称</th>
           <th data-sort="industry">行业</th>
           <th data-sort="business_desc">主营业务</th>
+          <th data-sort="ah_status">A+H状态</th>
           <th data-sort="total_mv">总市值(亿)</th>
           <th data-sort="ytd_2024">24TD | 25TD | YTD</th>
-          <th data-sort="ah_status">A+H状态</th>
           <th data-sort="revenue">2025收入(亿)</th>
           <th data-sort="gpr">毛利率</th>
           <th data-sort="net_profit">净利润(亿)</th>
@@ -610,7 +610,7 @@ function renderMobileList(pd) {{
           '<div class="mc-name" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">' + r.name + '</div>' +
           '<div class="mc-mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '亿</div>' +
         '</div>' +
-        '<div class="mc-ah-status" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:4px 0">' + ahTag + '<span class="sanction-tag ' + (defaultSanction.hasOwnProperty(r.ts_code) ? 'on' : 'off') + '" data-code="' + r.ts_code + '">' + (defaultSanction.hasOwnProperty(r.ts_code) ? getSanctionLabel(r.ts_code) : '\u26d4') + '</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</div>' +
+        '<div class="mc-ah-status" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:4px 0">' + ahTag + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</div>' +
         '<div class="mc-info">' +
           '<span class="code">' + r.ts_code + '</span>' +
           (r.hk_code ? '<span class="hk-code-m">' + r.hk_code + '.HK</span>' : '') +
