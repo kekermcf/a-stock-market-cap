@@ -185,7 +185,8 @@ max_mv = f"{results[0]['total_mv']:,.0f}"
 avg_mv = f"{sum(r['total_mv'] for r in results)/len(results):,.0f}"
 med_mv = f"{results[len(results)//2]['total_mv']:,.0f}"
 
-html = f"""<!DOCTYPE html>
+html = f"""<!-- deploy:v20260602-2 -->
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
