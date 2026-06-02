@@ -225,7 +225,7 @@
   "000988.SZ": "announced",
   "002920.SZ": "announced",
   "002487.SZ": "announced",
-  "301087.SZ": "announced",
+  "301087.SZ": "listed",
   "002747.SZ": "listed",
   "601966.SH": "listed",
   "001389.SZ": "listed",
@@ -241,5 +241,6 @@
   "688521.SH": "announced",
   "688110.SH": "announced",
   "688403.SH": "announced",
-  "301308.SZ": "announced"
+  "301308.SZ": "announced",
+  "688062.SH": "listed"
 }
