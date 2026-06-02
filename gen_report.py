@@ -1105,7 +1105,7 @@ function updateSanctionTags() {{
   for (var i = 0; i < tags.length; i++) {{
     var t = tags[i];
     var code = t.getAttribute('data-code');
-    if (sanctionList.indexOf(code) >= 0) {{
+    if (isSanctioned(code)) {{
       t.textContent = 'US\u5236\u88c1';
       t.className = 'sanction-tag on';
     }} else {{
@@ -1119,7 +1119,7 @@ function updateSanctionRows() {{
   var rows = document.querySelectorAll('tr[data-code]');
   for (var i = 0; i < rows.length; i++) {{
     var code = rows[i].getAttribute('data-code');
-    if (sanctionList.indexOf(code) >= 0) {{
+    if (isSanctioned(code)) {{
       rows[i].classList.add('sanction-row');
     }} else {{
       rows[i].classList.remove('sanction-row');
@@ -1128,7 +1128,7 @@ function updateSanctionRows() {{
   var cards = document.querySelectorAll('.mobile-card[data-code]');
   for (var i = 0; i < cards.length; i++) {{
     var code = cards[i].getAttribute('data-code');
-    if (sanctionList.indexOf(code) >= 0) {{
+    if (isSanctioned(code)) {{
       cards[i].classList.add('sanction-row');
     }} else {{
       cards[i].classList.remove('sanction-row');
