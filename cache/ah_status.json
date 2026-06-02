@@ -221,7 +221,7 @@
   "688498.SH": "announced",
   "601136.SH": "announced",
   "300015.SZ": "rumor",
-  "600415.SH": "rumor",
+  "600415.SH": "announced",
   "000988.SZ": "announced",
   "002920.SZ": "announced",
   "002487.SZ": "announced",
@@ -240,5 +240,6 @@
   "688796.SH": "listed",
   "688521.SH": "announced",
   "688110.SH": "announced",
-  "688403.SH": "announced"
+  "688403.SH": "announced",
+  "301308.SZ": "announced"
 }
