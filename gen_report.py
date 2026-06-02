@@ -244,7 +244,7 @@ tbody td:nth-child(1),tbody td:nth-child(2),tbody td:nth-child(3),tbody td:nth-c
 .rate-neg{{color:#c0392b}}
 .rate-val{{color:#2980b9;font-weight:500}}
 .pending{{color:#bbb;font-style:italic;font-size:12px}}
-.biz-col{{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:#555}}
+.biz-col{{max-width:300px;font-size:13px;color:#555;text-align:left;white-space:normal;word-break:break-all}}
 .no-report{{color:#999;font-size:11px}}
 .name-cell{{display:flex;align-items:center;justify-content:space-between;width:100%;min-width:0}}
 .name-cell-left{{display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden}}
@@ -347,6 +347,7 @@ body.mobile .modal-close{{width:44px;height:44px;font-size:22px}}
 .mobile-card.ah-announced{{background:#fef9e7}}
 .mobile-card.ah-rumor{{background:#f5eef8}}
 .mc-top{{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}}
+.mc-rank{{font-size:12px;color:#999;margin-right:6px;font-weight:600}}
 .mc-name{{font-size:16px;font-weight:700;color:#1a1a2e}}
 .mc-name .ah-tag{{font-size:10px;padding:1px 5px;margin-left:4px}}
 .mc-mv{{font-size:18px;font-weight:700;color:#c0392b}}
@@ -450,12 +451,13 @@ body.mobile .sanction-tag.on{{font-size:11px}}
       <table>
         <thead><tr>
           <th data-sort="rank">排名</th>
+          <th data-sort="fav" style="width:32px;text-align:center">收藏</th>
           <th data-sort="ts_code">代码</th>
           <th data-sort="name">名称</th>
           <th data-sort="industry">行业</th>
           <th data-sort="business_desc">主营业务</th>
           <th data-sort="total_mv">总市值(亿)</th>
-          <th data-sort="ytd_2024">2024至今 | 2025至今 | 2026至今</th>
+          <th data-sort="ytd_2024">24年TD | 25年TD | 26YTD</th>
           <th data-sort="revenue">2025收入(亿)</th>
           <th data-sort="gpr">毛利率</th>
           <th data-sort="net_profit">净利润(亿)</th>
@@ -560,7 +562,8 @@ function render() {{
     var npCls = r.net_profit != null ? (r.net_profit >= 0 ? 'fin-pos' : 'fin-neg') : '';
     rows.push('<tr data-code="' + r.ts_code + '" class="' + ahClass.trim() + '">' +
       '<td>' + rk + '</td>' +
-      '<td class="code"><span class="fav-star off" data-code="' + r.ts_code + '" style="margin-right:4px">\u2606</span>' + r.ts_code + (r.hk_code ? '<br><span class="hk-code">' + r.hk_code + '.HK</span>' : '') + '</td>' +
+      '<td style="text-align:center">' + '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span>' + '</td>' +
+      '<td class="code">' + r.ts_code + (r.hk_code ? '<br><span class="hk-code">' + r.hk_code + '.HK</span>' : '') + '</td>' +
       '<td><b>' + r.name + '</b>' + ahTag + '<span class="sanction-tag ' + (defaultSanction.hasOwnProperty(r.ts_code) ? 'on' : 'off') + '" data-code="' + r.ts_code + '">' + (defaultSanction.hasOwnProperty(r.ts_code) ? getSanctionLabel(r.ts_code) : '\u26d4') + '</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</td>' +
       '<td>' + (r.industry || '-') + '</td>' +
       '<td class="biz-col">' + (r.business_desc || '-') + '</td>' +
@@ -596,12 +599,15 @@ function renderMobileList(pd) {{
     var ytd26 = r.ytd_2026 != null ? ytdHtml(r.ytd_2026) : '<span class="pending">-</span>';
     cards.push(
       '<div class="mobile-card' + ahClass + '" data-code="' + r.ts_code + '">' +
+        '<div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">' +
+          '<span class="fav-star off" data-code="' + r.ts_code + '">\u2606</span>' +
+          '<span class="mc-rank">' + r._rank + '</span>' +
+        '</div>' +
         '<div class="mc-top">' +
-          '<div class="mc-name" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">' + r._rank + '. ' + r.name + ahTag + '<span class="sanction-tag ' + (defaultSanction.hasOwnProperty(r.ts_code) ? 'on' : 'off') + '" data-code="' + r.ts_code + '">' + (defaultSanction.hasOwnProperty(r.ts_code) ? getSanctionLabel(r.ts_code) : '\u26d4') + '</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</div>' +
+          '<div class="mc-name" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">' + r.name + ahTag + '<span class="sanction-tag ' + (defaultSanction.hasOwnProperty(r.ts_code) ? 'on' : 'off') + '" data-code="' + r.ts_code + '">' + (defaultSanction.hasOwnProperty(r.ts_code) ? getSanctionLabel(r.ts_code) : '\u26d4') + '</span>' + (r.hk_list_date ? '<span class="hk-ld">H' + r.hk_list_date + '</span>' : '') + (r.ah_premium != null ? '<span class="ah-prem ' + (r.ah_premium >= 0 ? 'pos' : 'neg') + '">H/A:' + (r.ah_premium >= 0 ? '+' : '') + r.ah_premium + '%</span>' : '') + '</div>' +
           '<div class="mc-mv">' + Math.round(r.total_mv).toLocaleString('zh-CN') + '亿</div>' +
         '</div>' +
         '<div class="mc-info">' +
-          '<span class="fav-star off" data-code="' + r.ts_code + '" style="margin-right:4px">\u2606</span>' +
           '<span class="code">' + r.ts_code + '</span>' +
           (r.hk_code ? '<span class="hk-code-m">' + r.hk_code + '.HK</span>' : '') +
           '<span>' + (r.industry || '-') + '</span>' +
