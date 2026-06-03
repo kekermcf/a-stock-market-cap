@@ -382,6 +382,10 @@ body.mobile .sanction-tag.on{font-size:11px}
         <option value="">含国企</option>
         <option value="exclude">排除国企</option>
       </select>
+      <select id="hkPremFilter">
+        <option value="">全部公司</option>
+        <option value="hasPrem">含H股溢价</option>
+      </select>
       <button id="filterHkNew" style="padding:8px 14px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" title="仅显示A+H公司，按H股上市时间倒序">🇭🇰 H股次新股</button>
       <button id="clearFilters" style="padding:8px 14px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap;color:#888" title="清除所有筛选条件">✕ 清除</button>
     </div>
@@ -393,6 +397,7 @@ body.mobile .sanction-tag.on{font-size:11px}
           <th data-sort="fav" style="width:32px;text-align:center">收藏</th>
           <th data-sort="ts_code">代码</th>
           <th data-sort="name">名称</th>
+          <th data-sort="area">总部</th>
           <th data-sort="industry">行业</th>
           <th data-sort="business_desc">主营业务</th>
           <th data-sort="ah_status">A+H状态</th>
@@ -538,6 +543,7 @@ function render() {
       '<td style="text-align:center">' + '<span class="fav-star off" data-code="' + r.ts_code + '">☆</span>' + '</td>' +
       '<td class="code">' + r.ts_code + (r.hk_code ? '<br><span class="hk-code">' + r.hk_code + '.HK</span>' : '') + '</td>' +
       '<td><b>' + r.name + '</b></td>' +
+      '<td>' + (r.area || '-') + '</td>' +
       '<td>' + (r.industry || '-') + '</td>' +
       '<td class="biz-col">' + (r.business_desc || '-') + '</td>' +
       '<td class="col-ah-status">' + ahTag + '</td>' +
@@ -593,6 +599,7 @@ function renderMobileList(pd) {
         '<div class="mc-info">' +
           '<span class="code">' + r.ts_code + '</span>' +
           (r.hk_code ? '<span class="hk-code-m">' + r.hk_code + '.HK</span>' : '') +
+          (r.area ? '<span>' + r.area + '</span>' : '') +
           '<span>' + (r.industry || '-') + '</span>' +
         '</div>' +
         (r.business_desc ? '<div class="biz-col" style="margin-top:4px">' + r.business_desc + '</div>' : '') +
@@ -707,9 +714,9 @@ function filterData() {
   var ahVal = document.getElementById('ahFilter').value;
   var scVal = document.getElementById('sanctionFilter').value;
   var soeVal = document.getElementById('soeFilter').value;
+  var hkPremVal = document.getElementById('hkPremFilter').value;
 
-  // Parse mv filter value (supports ranges like "100-200" and single values)
-  var mvMin = 0, mvMax = Infinity;
+  var isFiltered = !!(q || ind || mvVal !== '0' || ahVal || scVal || soeVal || hkNewOn || hkPremVal === 'hasPrem');
   if (mvVal.indexOf('-') > 0) {
     var parts = mvVal.split('-');
     mvMin = +parts[0];
@@ -718,9 +725,7 @@ function filterData() {
     mvMin = +mvVal;
   }
 
-  var isFiltered = !!(q || ind || mvVal !== '0' || ahVal || scVal || soeVal || hkNewOn);
-
-  // Filter first, then check if current page is out of range
+  var isFiltered = !!(q || ind || mvVal !== '0' || ahVal || scVal || soeVal || hkNewOn || hkPremVal === 'hasPrem');
   filtered = allData.filter(function(r) {
     if (r.total_mv < mvMin || r.total_mv >= mvMax) return false;
     if (ind && r.industry !== ind) return false;
@@ -731,6 +736,10 @@ function filterData() {
     }
     if (scVal === 'exclude' && isSanctioned(r.ts_code)) return false;
     if (soeVal === 'exclude' && isSOE(r.ts_code)) return false;
+    if (hkPremVal === 'hasPrem') {
+      var s2 = ahStatus[r.ts_code] || '';
+      if (s2 !== 'listed' || r.ah_premium == null) return false;
+    }
     if (hkNewOn) {
       var s = ahStatus[r.ts_code] || '';
       if (s !== 'listed') return false;
@@ -811,6 +820,7 @@ document.getElementById('mvFilter').addEventListener('change', filterData);
 document.getElementById('ahFilter').addEventListener('change', filterData);
 document.getElementById('sanctionFilter').addEventListener('change', filterData);
 document.getElementById('soeFilter').addEventListener('change', filterData);
+document.getElementById('hkPremFilter').addEventListener('change', filterData);
 document.getElementById('filterHkNew').addEventListener('click', function() {
   hkNewOn = !hkNewOn;
   if (hkNewOn) {
@@ -835,6 +845,7 @@ document.getElementById('clearFilters').addEventListener('click', function() {
   document.getElementById('ahFilter').value = '';
   document.getElementById('sanctionFilter').value = '';
   document.getElementById('soeFilter').value = '';
+  document.getElementById('hkPremFilter').value = '';
   hkNewOn = false;
   var hkBtn = document.getElementById('filterHkNew');
   hkBtn.style.background = '#fff';
