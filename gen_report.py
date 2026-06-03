@@ -534,6 +534,7 @@ var hkNewOn = false;
 var curPage = 1;
 var sortKey = 'total_mv';
 var sortDir = -1;
+var mvMin = 0, mvMax = Infinity;
 
 function numfmt(v, d) {{
   d = d || 0;
@@ -757,6 +758,10 @@ function filterData() {{
     mvMax = +parts[1];
   }} else if (+mvVal > 0) {{
     mvMin = +mvVal;
+    mvMax = Infinity;
+  }} else {{
+    mvMin = 0;
+    mvMax = Infinity;
   }}
 
   var isFiltered = !!(q || ind || mvVal !== '0' || ahVal || scVal || soeVal || hkNewOn || hkPremVal === 'hasPrem');
