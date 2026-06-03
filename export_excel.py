@@ -33,7 +33,7 @@ def get_sanction_label(ts_code):
     return ''
 
 headers = [
-    '排名', '代码', '名称', '行业', '主营业务',
+    '排名', '代码', '名称', '总部', '行业', '主营业务',
     'A+H状态', '制裁', 'H上市日', 'H/A溢价',
     '总市值(亿)', '24TD', '25TD', 'YTD',
     '2025收入(亿)', '毛利率', '净利润(亿)', '净利率'
@@ -70,6 +70,7 @@ for r in results:
         r.get('_rank', ''),
         ts,
         r.get('name', ''),
+        r.get('area', ''),
         r.get('industry', ''),
         r.get('business_desc', ''),
         ah_tag,
@@ -87,8 +88,8 @@ for r in results:
     ]
     rows.append(row)
 
-# Sort by total_mv descending
-rows.sort(key=lambda x: float(x[9]) if x[9] else 0, reverse=True)
+# Sort by total_mv descending (now at index 10)
+rows.sort(key=lambda x: float(x[10]) if x[10] else 0, reverse=True)
 for i, row in enumerate(rows):
     row[0] = i + 1
 
@@ -109,7 +110,7 @@ for col_idx, h in enumerate(headers, 1):
     cell.alignment = Alignment(horizontal='center', wrap_text=True)
     cell.border = thin_border
 
-center_cols = [1, 6, 7, 8]  # rank, A+H状态, 制裁, H上市日
+center_cols = [1, 7, 8, 9]  # rank, A+H状态, 制裁, H上市日
 
 for row_idx, row in enumerate(rows, 2):
     for col_idx, val in enumerate(row, 1):
@@ -117,12 +118,12 @@ for row_idx, row in enumerate(rows, 2):
         cell.border = thin_border
         if col_idx in center_cols:
             cell.alignment = Alignment(horizontal='center')
-        elif isinstance(val, (int, float)) and col_idx not in [2, 3, 4, 5]:
+        elif isinstance(val, (int, float)) and col_idx not in [2, 3, 4, 5, 6]:
             cell.alignment = Alignment(horizontal='right')
         else:
             cell.alignment = Alignment(horizontal='left')
 
-col_widths = [6, 12, 10, 12, 40, 10, 14, 12, 14, 12, 8, 8, 8, 14, 8, 14, 8]
+col_widths = [6, 12, 10, 10, 12, 40, 10, 14, 12, 14, 12, 8, 8, 8, 14, 8, 14, 8]
 for col_idx, width in enumerate(col_widths, 1):
     ws.column_dimensions[get_column_letter(col_idx)].width = width
 
