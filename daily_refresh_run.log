@@ -1,0 +1,65 @@
+WARNING: query_neodata not available
+============================================================
+A股 市值>200亿 每日自动刷新
+============================================================
+  Verified trade date: 20260623 (3.0/3 samples ok)
+
+Preferred trade date: 20260623
+  Using cached data from 20260622
+  No data for 20260623, falling back to 20260622
+
+[1/5] Market Value Data
+  Loaded 943 stocks from cache (20260622)
+  Data date 20260622 is older than preferred 20260623, trying QQ update...
+  Using 20260622 data as baseline (943 stocks), updating via QQ K-line...
+  QQ K-line latest date: 20260623
+  K-line date distribution: {'20260623': 899, '20260622': 1}
+  Using actual date: 20260623
+  43 stocks failed to update, using old close prices
+  Updated 943 stocks via QQ K-line
+  943 stocks with MV >= 200B (data as of 20260623)
+
+[2/5] Finance & Profile Data (from cache)
+  Finance: 1113, Profiles: 1113, MV history: 1062
+
+[3/5] Recalculating YTD
+  1071 stocks with annual data
+
+[4/8] Auto-update AH status
+  AKShare not available, skipping AH update
+
+[5/8] Merging all data
+
+[5/8] Generating HTML report
+  943 stocks with MV >= 200B
+Done! 943 stocks
+HTML size: 2.94 MB
+Saved to: /Users/kkmba/WorkBuddy/2026-05-10-task-1/repo/A股市值超200亿名单_20260623.html
+Index: /Users/kkmba/WorkBuddy/2026-05-10-task-1/repo/ashare.html
+  Generating watchlist page...
+  Watchlist page done! 943 stocks available
+HTML size: 2.88 MB
+Saved to: /Users/kkmba/WorkBuddy/2026-05-10-task-1/repo/watchlist.html
+
+[6/8] Fetching HK stock data...
+  ============================================================
+港股数据获取 — 市值 >= 250 亿港币
+============================================================
+Trade date: 20260508
+
+[1/3] Fetching HK stock data...
+  ERROR: akshare not installed. Run: pip install akshare
+  新浪不可用: No module named 'akshare'
+Failed to fetch data from all sources. Exiting.
+
+[7/8] Generating HK report...
+  Loaded 318 HK stocks
+Hong Kong report done! 318 stocks
+HTML size: 0.14 MB
+Saved to: /Users/kkmba/WorkBuddy/2026-05-10-task-1/repo/hongkong.html
+
+[8/8] Pushing to GitHub Pages
+  Committed: 20260623
+  Pushed to GitHub!
+
+Done!
