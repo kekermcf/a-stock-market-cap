@@ -47,6 +47,9 @@ QQ_F_PE = 39
 QQ_F_PB = 43
 QQ_F_MV_H = 44    # H股流通市值
 QQ_F_MV_TOTAL = 45  # 总市值（含A+H全部股份）
+QQ_F_DATETIME = 30  # 报价时间 "2026/11/13 16:08:22"
+
+_QUOTE_DATES = []  # 本次抓取到的行情报价日期集合（推断真实交易日用）
 
 
 def _num(v, default=0):
@@ -80,7 +83,12 @@ def fetch_hk_spot_sina():
     try:
         import akshare as ak
         print('  尝试 AKShare 新浪数据源...')
-        df = ak.stock_hk_spot()
+        # akshare >= 1.20.46 将 stock_hk_spot 更名为 stock_hk_spot_sina
+        fn = getattr(ak, 'stock_hk_spot_sina', None) or getattr(ak, 'stock_hk_spot', None)
+        if fn is None:
+            print('  新浪不可用: 当前 akshare 无 stock_hk_spot_sina 接口')
+            return None
+        df = fn()
         print(f'  新浪返回 {len(df)} 只港股')
         return df
     except Exception as e:
@@ -92,6 +100,8 @@ def fetch_qq_batch(codes):
     """通过腾讯接口批量获取港股行情（含市值/PE/PB）
     每次最多约50只，逗号分隔
     """
+    global _QUOTE_DATES
+    _QUOTE_DATES = []
     BATCH = 50
     all_stocks = []
 
@@ -122,6 +132,14 @@ def fetch_qq_batch(codes):
                 pct_chg = _num(data[QQ_F_PCTCHG])
                 pe = data[QQ_F_PE] if data[QQ_F_PE] else ''
                 pb = data[QQ_F_PB] if data[QQ_F_PB] else ''
+
+                # 记录行情报价日期，用于推断真实交易日（避免用文件名粘滞日期）
+                try:
+                    _dt = str(data[QQ_F_DATETIME]).strip()[:10]
+                    if len(_dt) == 10 and _dt[4] == '/':
+                        _QUOTE_DATES.append(_dt.replace('/', ''))
+                except Exception:
+                    pass
 
                 all_stocks.append({
                     'code': code,
@@ -341,7 +359,10 @@ def load_ah_status():
         try:
             # Get the full HK stock list
             import akshare as ak
-            df = ak.stock_hk_spot()
+            _fn = getattr(ak, 'stock_hk_spot_sina', None) or getattr(ak, 'stock_hk_spot', None)
+            if _fn is None:
+                raise RuntimeError('akshare 无 stock_hk_spot_sina 接口')
+            df = _fn()
             if df is not None and not df.empty:
                 # Build HK name → code map
                 hk_name_map = {}
@@ -382,21 +403,16 @@ def main():
     print('港股数据获取 — 市值 >= 250 亿港币')
     print('=' * 60)
 
-    # 获取交易日
+    # 获取交易日：优先用行情自带的报价日期（抓取后回填），
+    # 抓取前先按"盘前回退 + 跳周末"给出预期日期
     from datetime import timedelta
     d = datetime.now()
+    if d.hour < 9:
+        d -= timedelta(days=1)
     while d.weekday() >= 5:
         d -= timedelta(days=1)
     trade_date = d.strftime('%Y%m%d')
-
-    # 尝试从现有缓存推断日期
-    import glob
-    mv_files = sorted(glob.glob(os.path.join(CACHE_DIR, 'hk_data_*.json')))
-    if mv_files:
-        latest_date = os.path.basename(mv_files[-1]).replace('hk_data_', '').replace('.json', '')
-        if latest_date <= trade_date:
-            trade_date = latest_date
-    print(f'Trade date: {trade_date}')
+    print(f'Trade date (expected): {trade_date}')
 
     # Step 1: Fetch data
     print('\n[1/3] Fetching HK stock data...')
@@ -423,6 +439,15 @@ def main():
     if not stocks:
         print('Failed to fetch data from all sources. Exiting.')
         return
+
+    # 用行情自带报价日期覆盖预期日期（多数票的报价日即真实交易日）
+    if _QUOTE_DATES:
+        from collections import Counter
+        real_date = Counter(_QUOTE_DATES).most_common(1)[0][0]
+        if real_date != trade_date:
+            print(f'  Quote date from feed: {real_date} (expected {trade_date}) -> using {real_date}')
+        trade_date = real_date
+    print(f'Trade date: {trade_date}')
 
     # 加载 A+H 双上市状态
     print('\n[AH] Loading A+H dual-listing status...')

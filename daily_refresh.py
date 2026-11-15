@@ -464,13 +464,18 @@ def main():
             else:
                 print(f'  AH update skipped: {r.stderr[:100]}')
         else:
-            # Try AKShare directly
+            # 无专用更新脚本时，仅做可用性探测（不写入 ah_status.json）
             try:
                 import akshare as ak
-                df = ak.stock_zh_ah_name()
-                print(f'  AKShare returned {len(df)} AH stocks')
-            except:
-                print('  AKShare not available, skipping AH update')
+                # akshare >= 1.20.46: stock_zh_ah_name 更名为 stock_zh_ah_name_tx
+                fn = getattr(ak, 'stock_zh_ah_name_tx', None) or getattr(ak, 'stock_zh_ah_name', None)
+                if fn is None:
+                    print('  AH probe skipped: no stock_zh_ah_name_tx interface')
+                else:
+                    df = fn()
+                    print(f'  AH probe ok: {len(df)} A+H names (ah_status.json NOT rewritten — no updater script)')
+            except Exception as e:
+                print(f'  AH probe failed (non-critical): {type(e).__name__}: {str(e)[:80]}')
     except Exception as e:
         print(f'  AH update failed (non-critical): {e}')
 
