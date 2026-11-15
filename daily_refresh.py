@@ -93,8 +93,17 @@ def get_latest_trade_date():
         
         d -= timedelta(days=1)
     
-    # 兜底：纯周末跳过
+    # 兜底：校验全部失败（多为限流）时，绝不能返回"今天"，
+    # 否则会把尚未产生的交易日当成有数据。优先用最新缓存日期。
+    existing = sorted(glob.glob(f'{CACHE_DIR}/mv_data_*.json'))
+    if existing:
+        cache_date = os.path.basename(existing[-1]).replace('mv_data_', '').replace('.json', '')
+        print(f'  WARNING: K-line verification failed, using latest cache date: {cache_date}')
+        return cache_date
+
     d = datetime.now()
+    if d.hour < 9:
+        d -= timedelta(days=1)
     while d.weekday() >= 5:
         d -= timedelta(days=1)
     fallback = d.strftime('%Y%m%d')
@@ -189,7 +198,10 @@ def fetch_mv_via_qq(trade_date):
     if actual_kline_date:
         print(f'  QQ K-line latest date: {actual_kline_date}')
     else:
-        actual_kline_date = trade_date
+        # 抽样失败（多为限流）时，绝不能把基准数据改标成 trade_date，
+        # 否则会把旧收盘价冒充为新交易日数据。回退到基准缓存日期。
+        actual_kline_date = base_date
+        print(f'  WARNING: QQ K-line probe failed, keeping baseline date {base_date}')
     
     def get_latest_from_qq(qq_code):
         """获取最新收盘价和涨跌幅"""
@@ -260,7 +272,11 @@ def fetch_mv_via_qq(trade_date):
     if date_counts:
         actual_date = max(date_counts, key=date_counts.get)
     else:
-        actual_date = actual_kline_date
+        # 无任何股票返回K线日期 → 全部沿用基准收盘价，日期必须保持基准日期
+        actual_date = base_date
+        print(f'  WARNING: no K-line dates returned, data unchanged from {base_date}')
+    if actual_date < base_date:
+        actual_date = base_date
     print(f'  K-line date distribution: {date_counts}')
     print(f'  Using actual date: {actual_date}')
     updated = [s for s in updated if s['total_mv'] >= 200]
